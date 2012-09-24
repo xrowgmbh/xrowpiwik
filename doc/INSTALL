@@ -1,0 +1,9 @@
+﻿How to use this extension
+1) place xrowpiwik in extension folder
+2) activate extension
+3) modify ReWriteRules to work with /extension/xrowpiwik/src/piwik/
+3.1) <add input="{URL}" pattern="extension/xrowpiwik/src/piwik/" ignoreCase="false" />
+4) adjust DB-Connection in /extension/settings/config.ini.append.php
+5) insert mysql schema+data from extension\xrowpiwik\doc\mysql_schema\xrowpiwik_clean.sql
+
+Standard User: admin / admin
