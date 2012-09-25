@@ -8,7 +8,7 @@
  *
  * @package Piwik
  */
-
+umask(0);
 define('PIWIK_DOCUMENT_ROOT', dirname(__FILE__)=='/'?'':dirname(__FILE__));
 if(file_exists(PIWIK_DOCUMENT_ROOT . '/bootstrap.php'))
 {
