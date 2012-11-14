@@ -1,3 +1,0 @@
-<?php 
-echo "Starting SVG-Import\n";
-system("/usr/local/zend/bin/php extension/data_import/scripts/run.php -i ImportOperator -d xrowSVGHandler");
