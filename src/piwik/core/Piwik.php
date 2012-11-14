@@ -422,7 +422,6 @@ class Piwik
 		{
 			return;
 		}
-		
 		$directoryList = '';
 		foreach($resultCheck as $dir => $bool)
 		{

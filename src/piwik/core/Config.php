@@ -155,8 +155,7 @@ class Piwik_Config
 	 */
 	static public function getLocalConfigPath()
 	{
-        #return PIWIK_USER_PATH .'/config/config.ini.php';
-        return $_SERVER['DOCUMENT_ROOT'] . "/settings/override/config.ini.append.php";
+        return PIWIK_USER_PATH .'/config/config.ini.php';
 	}
 
 	/**

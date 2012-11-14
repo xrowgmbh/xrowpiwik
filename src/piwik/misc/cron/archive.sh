@@ -67,6 +67,7 @@ SEGMENTS_TO_ARCHIVE=`$CMD_GET_SEGMENTS_TO_ARCHIVE`
 
 echo "Starting Piwik reports archiving..."
 echo ""
+
 for idsite in $ID_SITES; do
   TEST_IS_NUMERIC=`echo $idsite | egrep '^[0-9]+$'`
   if test -n "$TEST_IS_NUMERIC"; then
