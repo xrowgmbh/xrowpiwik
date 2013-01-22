@@ -1,6 +1,8 @@
 <?php /* #?ini charset="utf-8"?
 
-[General]
-PiwikSiteID=1
+
+#[General]
+# SiteID defaults to 1, if not set
+#PiwikSiteID=1
 
 */ ?>
