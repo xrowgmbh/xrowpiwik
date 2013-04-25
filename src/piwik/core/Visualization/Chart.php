@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Chart.php 6618 2012-07-31 17:04:35Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -147,11 +146,6 @@ abstract class Piwik_Visualization_Chart implements Piwik_View_Interface
 		$this->xSteps = $steps;
 	}
 	
-	public function setSelectabelColumns($selectableColumns)
-	{
-		$this->seriesPicker['selectableColumns'] = $selectableColumns;
-	}
-	
 	/**
 	 * Show every x-axis tick instead of just every other one.
 	 */
@@ -163,7 +157,8 @@ abstract class Piwik_Visualization_Chart implements Piwik_View_Interface
 	public function render()
 	{
 		Piwik::overrideCacheControlHeaders();
-		
+
+        // See http://www.jqplot.com/docs/files/jqPlotOptions-txt.html
 		$data = array(
 			'params' => array(
 				'axes' => &$this->axes,
@@ -174,7 +169,8 @@ abstract class Piwik_Visualization_Chart implements Piwik_View_Interface
 			'tooltip' => &$this->tooltip,
 			'seriesPicker' => &$this->seriesPicker
 		);
-		
+
+        Piwik_PostEvent('Visualization_Chart.render', $data);
 		return Piwik_Common::json_encode($data);
 	}
 	

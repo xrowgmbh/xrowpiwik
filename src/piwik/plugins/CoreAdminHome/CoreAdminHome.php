@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CoreAdminHome.php 6699 2012-08-07 05:40:05Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -44,19 +43,19 @@ class Piwik_CoreAdminHome extends Piwik_Plugin
 		$tasks = &$notification->getNotificationObject();
 		
 		// general data purge on older archive tables, executed daily
-		$priority = Piwik_ScheduledTask::NORMAL_PRIORITY;
-		$purgeArchiveTablesTask = new Piwik_ScheduledTask ( $this, 
+		$purgeArchiveTablesTask = new Piwik_ScheduledTask ( $this,
 															'purgeOutdatedArchives',
+															null,
 															new Piwik_ScheduledTime_Daily(),
-															$priority );
+															Piwik_ScheduledTask::HIGH_PRIORITY);
 		$tasks[] = $purgeArchiveTablesTask;
 							
 		// lowest priority since tables should be optimized after they are modified
-		$priority = Piwik_ScheduledTask::LOWEST_PRIORITY;
-		$optimizeArchiveTableTask = new Piwik_ScheduledTask ( $this, 
+		$optimizeArchiveTableTask = new Piwik_ScheduledTask ( $this,
 															'optimizeArchiveTable',
+															null,
 															new Piwik_ScheduledTime_Daily(),
-															$priority );
+															Piwik_ScheduledTask::LOWEST_PRIORITY);
 		$tasks[] = $optimizeArchiveTableTask;
 	}
 
@@ -71,6 +70,7 @@ class Piwik_CoreAdminHome extends Piwik_Plugin
 		$cssFiles[] = "plugins/CoreAdminHome/templates/menu.css";	
 		$cssFiles[] = "themes/default/common.css";
 		$cssFiles[] = "plugins/CoreAdminHome/templates/styles.css";
+		$cssFiles[] = "plugins/CoreHome/templates/donate.css";
 	}
 
 	/**
@@ -84,17 +84,28 @@ class Piwik_CoreAdminHome extends Piwik_Plugin
 		$jsFiles[] = "libs/jquery/jquery-ui.js";
 		$jsFiles[] = "libs/javascript/sprintf.js";
 		$jsFiles[] = "themes/default/common.js";
+		$jsFiles[] = "themes/default/ajaxHelper.js";
 		$jsFiles[] = "libs/jquery/jquery.history.js";
 		$jsFiles[] = "plugins/CoreHome/templates/broadcast.js";
 		$jsFiles[] = "plugins/CoreAdminHome/templates/generalSettings.js";
+		$jsFiles[] = "plugins/CoreHome/templates/donate.js";
 	}
 	
 	function addMenu()
 	{
-		Piwik_AddAdminMenu('CoreAdminHome_MenuGeneralSettings', 
+		Piwik_AddAdminSubMenu('CoreAdminHome_MenuManage', NULL, "", Piwik::isUserHasSomeAdminAccess(), $order = 1);
+		Piwik_AddAdminSubMenu('CoreAdminHome_MenuCommunity', NULL, "", Piwik::isUserHasSomeAdminAccess(), $order = 3);
+		Piwik_AddAdminSubMenu('CoreAdminHome_MenuDiagnostic', NULL, "", Piwik::isUserHasSomeAdminAccess(), $order = 20);
+		Piwik_AddAdminSubMenu('General_Settings', NULL, "", Piwik::isUserHasSomeAdminAccess(), $order = 5);
+		Piwik_AddAdminSubMenu('General_Settings', 'CoreAdminHome_MenuGeneralSettings',
 							array('module' => 'CoreAdminHome', 'action' => 'generalSettings'),
 							Piwik::isUserHasSomeAdminAccess(),
 							$order = 6);
+		Piwik_AddAdminSubMenu('CoreAdminHome_MenuManage', 'CoreAdminHome_TrackingCode',
+							array('module' => 'CoreAdminHome', 'action' => 'trackingCodeGenerator'), 
+							Piwik::isUserHasSomeAdminAccess(),
+							$order = 4);
+							
 	}
 	
 	function purgeOutdatedArchives()

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Row.php 6669 2012-08-04 15:18:28Z JulienM $
  * 
  * @category Piwik
  * @package Piwik
@@ -32,6 +31,16 @@
 class Piwik_DataTable_Row
 {
 	/**
+	 * List of columns that cannot be summed. An associative array for speed.
+	 * 
+	 * @var array
+	 */
+	private static $unsummableColumns = array(
+		'label' => true,
+		'full_url' => true // column used w/ old Piwik versions
+	);
+	
+	/**
 	 * This array contains the row information:
 	 * - array indexed by self::COLUMNS contains the columns, pairs of (column names, value) 
 	 * - (optional) array indexed by self::METADATA contains the metadata,  pairs of (metadata name, value)
@@ -43,6 +52,9 @@ class Piwik_DataTable_Row
 	 */
 	public $c = array();
 	private $subtableIdWasNegativeBeforeSerialize = false;
+
+	// @see sumRow - implementation detail
+	public $maxVisitsSummed = 0;
 	
 	const COLUMNS = 0;
 	const METADATA = 1;
@@ -91,6 +103,8 @@ class Piwik_DataTable_Row
 	/**
 	 * Because $this->c[self::DATATABLE_ASSOCIATED] is negative when the table is in memory,
 	 * we must prior to serialize() call, make sure the ID is saved as positive integer
+	 *
+	 * Only serialize the "c" member
 	 */
 	public function __sleep()
 	{
@@ -251,6 +265,20 @@ class Piwik_DataTable_Row
 	}
 	
 	/**
+	 * Returns the associated subtable, if one exists.
+	 * 
+	 * @return Piwik_DataTable|false
+	 */
+	public function getSubtable()
+	{
+		if ($this->isSubtableLoaded())
+		{
+			return Piwik_DataTable_Manager::getInstance()->getTable($this->getIdSubDataTable());
+		}
+		return false;
+	}
+	
+	/**
 	 * Sums a DataTable to this row subDataTable.
 	 * If this row doesn't have a SubDataTable yet, we create a new one.
 	 * Then we add the values of the given DataTable to this row's DataTable.
@@ -262,7 +290,7 @@ class Piwik_DataTable_Row
 	{
 		if($this->isSubtableLoaded())
 		{
-			$thisSubTable = Piwik_DataTable_Manager::getInstance()->getTable( $this->getIdSubDataTable() );
+			$thisSubTable = $this->getSubtable();
 		}
 		else
 		{
@@ -278,8 +306,8 @@ class Piwik_DataTable_Row
 	 * If the row already has a DataTable associated to it, throws an Exception.
 	 * 
 	 * @param Piwik_DataTable  $subTable  DataTable to associate to this row
+	 * @return Piwik_DataTable Returns $subTable.
 	 * @throws Exception 
-	 * 
 	 */
 	public function addSubtable(Piwik_DataTable $subTable)
 	{
@@ -287,7 +315,7 @@ class Piwik_DataTable_Row
 		{
 			throw new Exception("Adding a subtable to the row, but it already has a subtable associated.");
 		}
-		$this->setSubtable($subTable);
+		return $this->setSubtable($subTable);
 	}
 	
 	/**
@@ -295,12 +323,14 @@ class Piwik_DataTable_Row
 	 * a DataTable associated, it is simply overwritten.
 	 * 
 	 * @param Piwik_DataTable  $subTable  DataTable to associate to this row
+	 * @return Piwik_DataTable Returns $subTable.
 	 */
 	public function setSubtable(Piwik_DataTable $subTable)
 	{
 		// Hacking -1 to ensure value is negative, so we know the table was loaded
 		// @see isSubtableLoaded()
 		$this->c[self::DATATABLE_ASSOCIATED] = -1 * $subTable->getId();
+		return $subTable;
 	}
 	
 	/**
@@ -446,11 +476,11 @@ class Piwik_DataTable_Row
 	 *
 	 * @param Piwik_DataTable_Row  $rowToSum
 	 */
-	public function sumRow( Piwik_DataTable_Row $rowToSum )
+	public function sumRow( Piwik_DataTable_Row $rowToSum, $enableCopyMetadata = true )
 	{
 		foreach($rowToSum->getColumns() as $columnToSumName => $columnToSumValue)
 		{
-			if($columnToSumName != 'label')
+			if (!isset(self::$unsummableColumns[$columnToSumName])) // make sure we can add this column
 			{
 				$thisColumnValue = $this->getColumn($columnToSumName);
 				
@@ -466,6 +496,34 @@ class Piwik_DataTable_Row
 				$this->setColumn( $columnToSumName, $newValue);
 			}
 		}
+
+		if($enableCopyMetadata)
+		{
+			$this->sumRowMetadata($rowToSum);
+		}
+	}
+
+	public function sumRowMetadata($rowToSum)
+	{
+		if (!empty($rowToSum->c[self::METADATA])
+			&& !$this->isSummaryRow())
+		{
+			// We shall update metadata, and keep the metadata with the _most visits or pageviews_, rather than first or last seen
+			$visits = max($rowToSum->getColumn(Piwik_Archive::INDEX_PAGE_NB_HITS) || $rowToSum->getColumn(Piwik_Archive::INDEX_NB_VISITS),
+				// Old format pre-1.2, @see also method updateInterestStats()
+				$rowToSum->getColumn('nb_actions') || $rowToSum->getColumn('nb_visits'));
+			if (($visits && $visits > $this->maxVisitsSummed)
+				|| empty($this->c[self::METADATA])
+			) {
+				$this->maxVisitsSummed = $visits;
+				$this->c[self::METADATA] = $rowToSum->c[self::METADATA];
+			}
+		}
+	}
+
+	public function isSummaryRow()
+	{
+		return $this->getColumn('label') === Piwik_DataTable::LABEL_SUMMARY_ROW;
 	}
 
 	/**
@@ -592,8 +650,8 @@ class Piwik_DataTable_Row
 			)
 		)
 		{
-			$subtable1 = Piwik_DataTable_Manager::getInstance()->getTable($row1->getIdSubDataTable());
-			$subtable2 = Piwik_DataTable_Manager::getInstance()->getTable($row2->getIdSubDataTable());
+			$subtable1 = $row1->getSubtable();
+			$subtable2 = $row2->getSubtable();
 			if(!Piwik_DataTable::isEqual($subtable1, $subtable2))
 			{
 				return false;

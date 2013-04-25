@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Config.php 6791 2012-08-16 13:59:34Z EZdesign $
  *
  * @category Piwik
  * @package Piwik
@@ -114,6 +113,8 @@ class Piwik_Config
 		if(is_null($pathGlobal))
 		{
 			$this->configCache['Debug'] = $this->configGlobal['Debug'];
+			$this->configCache['branding'] = $this->configGlobal['branding'];
+			$this->configCache['mail'] = $this->configGlobal['mail'];
 			$this->configCache['General'] = $this->configGlobal['General'];
 			$this->configCache['Segments'] = $this->configGlobal['Segments'];
 			$this->configCache['Tracker'] = $this->configGlobal['Tracker'];
@@ -155,7 +156,7 @@ class Piwik_Config
 	 */
 	static public function getLocalConfigPath()
 	{
-        return PIWIK_USER_PATH .'/config/config.ini.php';
+		return PIWIK_USER_PATH .'/config/config.ini.php';
 	}
 
 	/**
@@ -193,7 +194,6 @@ class Piwik_Config
 		$reportError = empty($GLOBALS['PIWIK_TRACKER_MODE']);
 
 		// read defaults from global.ini.php
-
 		if(!is_readable($this->pathGlobal) && $reportError)
 		{
 			Piwik_ExitWithMessage(Piwik_TranslateException('General_ExceptionConfigurationFileNotFound', array($this->pathGlobal)));

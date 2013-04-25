@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Live.php 6314 2012-05-25 11:20:24Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Live
@@ -58,7 +57,7 @@ class Piwik_Live extends Piwik_Plugin
 
 	function addMenu()
 	{
-		Piwik_AddMenu('General_Visitors', 'Live_VisitorLog', array('module' => 'Live', 'action' => 'getVisitorLog'));
+		Piwik_AddMenu('General_Visitors', 'Live_VisitorLog', array('module' => 'Live', 'action' => 'getVisitorLog'), true, $order = 5);
 	}
 
 	public function addWidget() 

@@ -5,10 +5,10 @@
 {foreach from=$visitors item=visitor}
 	<li id="{$visitor.idVisit}" class="visit">
 		<div style="display:none" class="idvisit">{$visitor.idVisit}</div>
-			<div class="datetime">
+			<div title="{$visitor.actionDetails|@count} {'Live_Actions'|translate}" class="datetime">
 				<span style='display:none' class='serverTimestamp'>{$visitor.serverTimestamp}</span>
-				{$visitor.serverDatePretty} - {$visitor.serverTimePretty} ({$visitor.visitDurationPretty})
-				&nbsp;<img src="{$visitor.countryFlag}" title="{$visitor.country}, {'Provider_ColumnProvider'|translate} {$visitor.provider}" />
+				{$visitor.serverDatePretty} - {$visitor.serverTimePretty} {if $visitor.visitDuration > 0}<i>({$visitor.visitDurationPretty})</i>{/if}
+				&nbsp;<img src="{$visitor.countryFlag}" title="{$visitor.location|escape:'html'}, {'Provider_ColumnProvider'|translate} {$visitor.provider}" />
 				&nbsp;<img src="{$visitor.browserIcon}" title="{$visitor.browserName}, {'UserSettings_Plugins'|translate}: {$visitor.plugins}" />
 				&nbsp;<img src="{$visitor.operatingSystemIcon}" title="{$visitor.operatingSystem}, {$visitor.resolution}" />
 				&nbsp;
@@ -20,7 +20,11 @@
 					&nbsp;- <img src="{$visitor.visitEcommerceStatusIcon}" title="{$visitor.visitEcommerceStatus}"/>
 				{/if}
 				</span>{/if}
-				{if $visitor.visitorTypeIcon}&nbsp;- <img src="{$visitor.visitorTypeIcon}" title="{'General_ReturningVisitor'|translate}" />{/if}
+				{if $visitor.visitorTypeIcon}
+					<a class="rightLink" href="javascript:broadcast.propagateAjax('module=Live&action=getVisitorLog&period=month&segment=visitorId=={$visitor.visitorId}')">
+					&nbsp;- <img src="{$visitor.visitorTypeIcon}" title="{'General_ReturningVisitor'|translate} - {'General_ReturningVisitorAllVisits'|translate}" />
+					</a>
+				{/if}
 				{if $visitor.visitIp}- <span title="{if !empty($visitor.visitorId)}{'General_VisitorID'|translate}: {$visitor.visitorId}{/if}">IP: {$visitor.visitIp}</span>{/if}
 			</div>
 			<!--<div class="settings"></div>-->
@@ -34,7 +38,7 @@
 				{else}{'Referers_DirectEntry'|translate}{/if}
 			</div>
 		<div id="{$visitor.idVisit}_actions" class="settings">
-			<span class="pagesTitle">{'Actions_SubmenuPages'|translate}:</span>&nbsp;
+			<span class="pagesTitle" title="{$visitor.actionDetails|@count} {'Live_Actions'|translate}" >{'Actions_SubmenuPages'|translate}:</span>&nbsp;
 			{php} $col = 0;	{/php}
 			{foreach from=$visitor.actionDetails item=action name=visitorPages}
 				{if $smarty.foreach.visitorPages.iteration <= $maxPagesDisplayedByVisitor}
@@ -56,6 +60,8 @@
 						<img src="plugins/Live/templates/images/file{php} echo $col; {/php}.png" title="{if !empty($action.pageTitle)}{$action.pageTitle}{/if} - {$action.serverTimePretty|escape:'html'}{if isset($action.timeSpentPretty)} - {'General_TimeOnPage'|translate}: {$action.timeSpentPretty}{/if}" />
 					{elseif $action.type == 'outlink' || $action.type == 'download'}
 						<img class='iconPadding' src="{$action.icon}" title="{$action.url|escape:'html'} - {$action.serverTimePretty|escape:'html'}" />
+					{elseif $action.type == 'search'}
+						<img class='iconPadding' src="{$action.icon}" title="{'Actions_SubmenuSitesearch'|translate|escape:'html'}: {$action.pageTitle|escape:'html'} - {$action.serverTimePretty|escape:'html'}" />
 					{else}
 						<img class='iconPadding' src="{$action.icon}" title="{$action.goalName|escape:'html'} - {if $action.revenue > 0}{'Live_GoalRevenue'|translate}: {$action.revenue|money:$idSite} - {/if} {$action.serverTimePretty|escape:'html'}" />
 					{/if}

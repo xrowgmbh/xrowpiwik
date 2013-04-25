@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6616 2012-07-31 15:25:53Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UsersManager
@@ -32,7 +31,7 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		
 		$IdSitesAdmin = Piwik_SitesManager_API::getInstance()->getSitesIdWithAdminAccess();
 		$idSiteSelected = 1;
-		
+
 		if(count($IdSitesAdmin) > 0)
 		{
 			$defaultWebsiteId = $IdSitesAdmin[0];
@@ -72,7 +71,7 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		        continue;
 		    }
 		}
-		
+
 		ksort($usersAccessByWebsite);
 		
 		$users = array();
@@ -85,7 +84,7 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 			    $usersAliasByLogin[$user['login']] = $user['alias'];
 			}
 		}
-		
+		$view->anonymousHasViewAccess = $this->hasAnonymousUserViewAccess($usersAccessByWebsite);
 		$view->idSiteSelected = $idSiteSelected;
 		$view->defaultReportSiteName = $defaultReportSiteName;
 		$view->users = $users;
@@ -99,7 +98,20 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		$view->menu = Piwik_GetAdminMenu();
 		echo $view->render();
 	}
-	
+
+	private function hasAnonymousUserViewAccess($usersAccessByWebsite)
+	{
+		$anonymousHasViewAccess = false;
+		foreach ($usersAccessByWebsite as $login => $access) {
+			if ($login == 'anonymous'
+				&& $access != 'noaccess'
+			) {
+				$anonymousHasViewAccess = true;
+			}
+		}
+		return $anonymousHasViewAccess;
+	}
+
 	/**
 	 * Returns default date for Piwik reports
 	 *
@@ -290,6 +302,13 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 					throw new Exception(Piwik_Translate('Login_PasswordsDoNotMatch'));
 				}
 				$newPassword = $password;
+			}
+			
+			// UI disables password change on invalid host, but check here anyway
+			if (!Piwik_Url::isValidHost()
+				&& $newPassword !== false)
+			{
+				throw new Exception("Cannot change password with untrusted hostname!");
 			}
 			
 			$userLogin = Piwik::getCurrentUserLogin();

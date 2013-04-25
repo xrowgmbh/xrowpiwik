@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6792 2012-08-16 13:59:58Z EZdesign $
  *
  * @category Piwik_Plugins
  * @package Piwik_Live
@@ -184,7 +183,7 @@ class Piwik_Live_API
 			// eg. Downloads, Outlinks. For these, idaction_name is set to 0
 			$sql = "
 				SELECT
-					log_action.type AS type,
+					COALESCE(log_action.type,log_action_title.type) AS type,
 					log_action.name AS url,
 					log_action.url_prefix,
 					log_action_title.name AS pageTitle,
@@ -194,7 +193,7 @@ class Piwik_Live_API
 					log_link_visit_action.time_spent_ref_action as timeSpentRef
 					$sqlCustomVariables
 				FROM " .Piwik_Common::prefixTable('log_link_visit_action')." AS log_link_visit_action
-					INNER JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action
+					LEFT JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action
 					ON  log_link_visit_action.idaction_url = log_action.idaction
 					LEFT JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action_title
 					ON  log_link_visit_action.idaction_name = log_action_title.idaction
@@ -204,14 +203,16 @@ class Piwik_Live_API
 			
 			foreach($actionDetails as $actionIdx => &$actionDetail)
 			{
+				$actionDetail =& $actionDetails[$actionIdx];
 				$customVariablesPage = array();
 				for($i = 1; $i <= Piwik_Tracker::MAX_CUSTOM_VARIABLES; $i++)
 				{
-					if(!empty($actionDetail['custom_var_k'.$i])
-						&& !empty($actionDetail['custom_var_v'.$i]))
+					if(!empty($actionDetail['custom_var_k'.$i]))
 					{
+						$cvarKey = $actionDetail['custom_var_k'.$i];
+						$cvarKey = $this->getCustomVariablePrettyKey($cvarKey);
 						$customVariablesPage[$i] = array(
-							'customVariableName'.$i => $actionDetail['custom_var_k'.$i],
+							'customVariableName'.$i => $cvarKey,
 							'customVariableValue'.$i => $actionDetail['custom_var_v'.$i],
 						);
 					}
@@ -357,6 +358,10 @@ class Piwik_Live_API
 						$details['type'] = 'outlink';
 						$details['icon'] = 'themes/default/images/link.gif';
 					break;
+					case Piwik_Tracker_Action::TYPE_SITE_SEARCH:
+						$details['type'] = 'search';
+						$details['icon'] = 'themes/default/images/search_ico.png';
+					break;
 					default:
 						$details['type'] = 'action';
 						$details['icon'] = null;
@@ -372,6 +377,18 @@ class Piwik_Live_API
 		return $table;
 	}
 
+	private function getCustomVariablePrettyKey($key)
+	{
+		$rename = array(
+			Piwik_Tracker_Action::CVAR_KEY_SEARCH_CATEGORY => Piwik_Translate('Actions_ColumnSearchCategory'),
+			Piwik_Tracker_Action::CVAR_KEY_SEARCH_COUNT => Piwik_Translate('Actions_ColumnSearchResultsCount'),
+		);
+		if(isset($rename[$key])) {
+			return $rename[$key];
+		}
+		return $key;
+	}
+
 	private function sortByServerTime($a, $b)
 	{
 		$ta = strtotime($a['serverTimePretty']);
@@ -385,8 +402,6 @@ class Piwik_Live_API
 	
 	private function loadLastVisitorDetailsFromDatabase($idSite, $period = false, $date = false, $segment = false, $filter_limit = false, $maxIdVisit = false, $visitorId = false, $minTimestamp = false)
 	{
-//		var_dump($period); var_dump($date); var_dump($filter_limit); var_dump($maxIdVisit); var_dump($visitorId);
-//var_dump($minTimestamp);
 		if(empty($filter_limit))
 		{
 			$filter_limit = 100;

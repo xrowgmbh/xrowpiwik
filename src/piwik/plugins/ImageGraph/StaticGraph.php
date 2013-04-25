@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: StaticGraph.php 6969 2012-09-10 23:14:49Z JulienM $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
@@ -40,6 +39,9 @@ abstract class Piwik_ImageGraph_StaticGraph
 
 	private $aliasedGraph;
 
+	/**
+	 * @var pImage
+	 */
 	protected $pImage;
 	protected $pData;
 	protected $ordinateLabels;
@@ -51,6 +53,7 @@ abstract class Piwik_ImageGraph_StaticGraph
 	protected $colors;
 	protected $font;
 	protected $fontSize;
+	protected $legendFontSize;
 	protected $width;
 	protected $height;
 	protected $forceSkippedLabels = false;
@@ -132,7 +135,16 @@ abstract class Piwik_ImageGraph_StaticGraph
 
 	public function setFontSize($fontSize)
 	{
+		if(!is_numeric($fontSize))
+		{
+			$fontSize = Piwik_ImageGraph_API::DEFAULT_FONT_SIZE;
+		}
 		$this->fontSize = $fontSize;
+	}
+
+	public function setLegendFontSize($legendFontSize)
+	{
+		$this->legendFontSize = $legendFontSize;
 	}
 
 	public function setFont($font)

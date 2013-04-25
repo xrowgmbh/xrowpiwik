@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PDFReports.php 6956 2012-09-10 01:53:28Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports
@@ -16,6 +15,9 @@
  */
 class Piwik_PDFReports extends Piwik_Plugin
 {
+	const MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY = 'MobileMessaging_TopMenu';
+	const PDF_REPORTS_TOP_MENU_TRANSLATION_KEY = 'PDFReports_EmailReports';
+
 	const DISPLAY_FORMAT_GRAPHS_ONLY_FOR_KEY_METRICS = 1; // Display Tables Only (Graphs only for key metrics)
 	const DISPLAY_FORMAT_GRAPHS_ONLY = 2; // Display Graphs Only for all reports
 	const DISPLAY_FORMAT_TABLES_AND_GRAPHS = 3; // Display Tables and Graphs for all reports
@@ -24,6 +26,7 @@ class Piwik_PDFReports extends Piwik_Plugin
 
 	const DEFAULT_REPORT_FORMAT = Piwik_ReportRenderer::HTML_FORMAT;
 	const DEFAULT_PERIOD = 'week';
+	const DEFAULT_HOUR = '0';
 
 	const EMAIL_ME_PARAMETER = 'emailMe';
 	const EVOLUTION_GRAPH_PARAMETER = 'evolutionGraph';
@@ -493,82 +496,88 @@ class Piwik_PDFReports extends Piwik_Plugin
 	 */
 	function getScheduledTasks ( $notification )
 	{
-		// Reports have to be sent when the period ends for all websites
-		$maxHourOffset = 0;
-		$uniqueTimezones = Piwik_SitesManager_API::getInstance()->getUniqueSiteTimezones();
-		$baseDate = Piwik_Date::factory("2011-01-01");
-		foreach($uniqueTimezones as &$timezone)
+		$arbitraryDateInUTC = Piwik_Date::factory('2011-01-01');
+		$tasks = &$notification->getNotificationObject();
+		foreach(Piwik_PDFReports_API::getInstance()->getReports() as $report)
 		{
-			$offsetDate = Piwik_Date::factory($baseDate->toString(), $timezone);
-
-			// Earlier means a negative timezone
-			if ( $offsetDate->isEarlier($baseDate) )
+			if (!$report['deleted'])
 			{
-				// Gets the timezone offset
-				$hourOffset = (24 - date ('H', $offsetDate->getTimestamp()));
+				$midnightInSiteTimezone =
+					date (
+						'H',
+						Piwik_Date::factory(
+							$arbitraryDateInUTC,
+							Piwik_Site::getTimezoneFor($report['idsite'])
+						)->getTimestamp()
+					);
 
-				if ( $hourOffset > $maxHourOffset )
-				{
-					$maxHourOffset = $hourOffset;
-				}
+				$hourInUTC = (24 - $midnightInSiteTimezone + $report['hour']) % 24;
+
+				$schedule = Piwik_ScheduledTime::getScheduledTimeForPeriod($report['period']);
+				$schedule->setHour($hourInUTC);
+				$tasks[] = new Piwik_ScheduledTask (
+					Piwik_PDFReports_API::getInstance(),
+					'sendReport',
+					$report['idreport'], $schedule
+				);
 			}
 		}
+	}
 
-		$tasks = &$notification->getNotificationObject();
-
-		$dailySchedule = new Piwik_ScheduledTime_Daily();
-		$dailySchedule->setHour($maxHourOffset);
-		$tasks[] = new Piwik_ScheduledTask ( $this, 'dailySchedule', $dailySchedule );
-
-		$weeklySchedule = new Piwik_ScheduledTime_Weekly();
-		$weeklySchedule->setHour($maxHourOffset);
-		$tasks[] = new Piwik_ScheduledTask ( $this, 'weeklySchedule', $weeklySchedule );
-
-		$monthlySchedule = new Piwik_ScheduledTime_Monthly();
-		$monthlySchedule->setHour($maxHourOffset);
-		$tasks[] = new Piwik_ScheduledTask ( $this, 'monthlySchedule', $monthlySchedule );
-	}
-	
-	function dailySchedule()
-	{
-		$this->generateAndSendScheduledReports('day');
-	}
-	
-	function weeklySchedule()
-	{
-		$this->generateAndSendScheduledReports('week');
-	}
-	
-	function monthlySchedule()
-	{
-		$this->generateAndSendScheduledReports('month');
-	}
-	
-	function generateAndSendScheduledReports($period)
-	{
-		// Select all reports to generate
-		$reportsToGenerate = Piwik_PDFReports_API::getInstance()->getReports($idSite = false, $period);
-		
-		// For each, generate the file and send the message with the attached report
-		foreach($reportsToGenerate as $report)
-		{
-			Piwik_PDFReports_API::getInstance()->sendReport($report['idreport']);
-		}
-	}
-		
     function addTopMenu()
     {
-    	$isMobileMessagingActivated = Piwik_PluginsManager::getInstance()->isPluginActivated('MobileMessaging');
-    	$tooltip = $isMobileMessagingActivated ? 'MobileMessaging_TopLinkTooltip' : 'PDFReports_TopLinkTooltip';
-    	Piwik_AddTopMenu(
-			$isMobileMessagingActivated ? 'MobileMessaging_TopMenu' : 'PDFReports_EmailReports',
+		Piwik_AddTopMenu(
+			$this->getTopMenuTranslationKey(),
 			array('module' => 'PDFReports', 'action' => 'index'),
 			true,
 			13,
 			$isHTML = false,
-			$tooltip = Piwik_Translate($tooltip)
+			$tooltip = Piwik_Translate(
+				Piwik_PluginsManager::getInstance()->isPluginActivated('MobileMessaging')
+					? 'MobileMessaging_TopLinkTooltip' : 'PDFReports_TopLinkTooltip'
+			)
 		);
     }
+
+	function getTopMenuTranslationKey()
+	{
+		// if MobileMessaging is not activated, display 'Email reports'
+		if(!Piwik_PluginsManager::getInstance()->isPluginActivated('MobileMessaging'))
+			return self::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY;
+
+		if(Piwik::isUserIsAnonymous())
+		{
+			return self::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY;
+ 		}
+
+		$reports = Piwik_PDFReports_API::getInstance()->getReports();
+		$reportCount = count($reports);
+
+		// if there are no reports and the mobile account is
+		//  not configured, display 'Email reports'
+		//  configured, display 'Email & SMS reports'
+		if($reportCount == 0)
+		 return Piwik_MobileMessaging_API::getInstance()->areSMSAPICredentialProvided() ?
+			 self::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY : self::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY;
+
+		$anyMobileReport = false;
+		foreach($reports as $report)
+		{
+			if($report['type'] == Piwik_MobileMessaging::MOBILE_TYPE)
+			{
+				$anyMobileReport = true;
+				break;
+			}
+		}
+
+		// if there is at least one sms report, display 'Email & SMS reports'
+		if($anyMobileReport)
+		{
+			return self::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY;
+		}
+
+		return self::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY;
+	}
 
 	/**
 	 * @param Piwik_Event_Notification $notification notification object
@@ -588,6 +597,7 @@ class Piwik_PDFReports extends Piwik_Plugin
 					`login` VARCHAR(100) NOT NULL,
 					`description` VARCHAR(255) NOT NULL,
 					`period` VARCHAR(10) NOT NULL,
+					`hour` tinyint NOT NULL default 0,
 					`type` VARCHAR(10) NOT NULL,
 					`format` VARCHAR(10) NOT NULL,
 					`reports` TEXT NOT NULL,

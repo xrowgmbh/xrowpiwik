@@ -5,28 +5,38 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-function getGeneralSettingsAJAX()
+function sendGeneralSettingsAJAX()
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf('ajaxLoading', 'ajaxError');
 	var enableBrowserTriggerArchiving = $('input[name=enableBrowserTriggerArchiving]:checked').val();
 	var todayArchiveTimeToLive = $('#todayArchiveTimeToLive').val();
-	var request = '';
-	request += 'module=CoreAdminHome';
-	request += '&action=setGeneralSettings';
-	request += '&format=json';
-	request += '&enableBrowserTriggerArchiving='+enableBrowserTriggerArchiving;
-	request += '&todayArchiveTimeToLive='+todayArchiveTimeToLive;
- 	request += '&token_auth=' + piwik.token_auth;
- 	request += '&mailUseSmtp=' + isSmtpEnabled();
- 	request += '&mailPort=' + encodeURIComponent($('#mailPort').val());
- 	request += '&mailHost=' + encodeURIComponent($('#mailHost').val());
- 	request += '&mailType=' + $('#mailType').val();
- 	request += '&mailUsername=' + encodeURIComponent($('#mailUsername').val());
- 	request += '&mailPassword=' + encodeURIComponent($('#mailPassword').val());
-	request += '&mailEncryption=' + $('#mailEncryption').val();
-	request += '&useCustomLogo=' + isCustomLogoEnabled();
-	ajaxRequest.data = request;
-	return ajaxRequest;
+
+	var trustedHosts = [];
+	$('input[name=trusted_host]').each(function () {
+		trustedHosts.push($(this).val());
+	});
+
+    var ajaxHandler = new ajaxHelper();
+    ajaxHandler.setLoadingElement();
+    ajaxHandler.addParams({
+        format:                         'json',
+        enableBrowserTriggerArchiving:  enableBrowserTriggerArchiving,
+        todayArchiveTimeToLive:         todayArchiveTimeToLive,
+        mailUseSmtp:                    isSmtpEnabled(),
+        mailPort:                       $('#mailPort').val(),
+        mailHost:                       $('#mailHost').val(),
+        mailType:                       $('#mailType').val(),
+        mailUsername:                   $('#mailUsername').val(),
+        mailPassword:                   $('#mailPassword').val(),
+        mailEncryption:                 $('#mailEncryption').val(),
+        useCustomLogo:                  isCustomLogoEnabled(),
+        trustedHosts:                   JSON.stringify(trustedHosts)
+    }, 'POST');
+    ajaxHandler.addParams({
+        module: 'CoreAdminHome',
+        action: 'setGeneralSettings'
+    }, 'GET');
+    ajaxHandler.redirectOnSuccess();
+    ajaxHandler.send(true);
 }
 function showSmtpSettings(value)
 {
@@ -54,10 +64,38 @@ function refreshCustomLogo() {
 }
 
 $(document).ready( function() {
+	var originalTrustedHostCount = $('input[name=trusted_host]').length;
+	
 	showSmtpSettings(isSmtpEnabled());
 	showCustomLogoSettings(isCustomLogoEnabled());
 	$('#generalSettingsSubmit').click( function() {
-		$.ajax( getGeneralSettingsAJAX() );
+		var doSubmit = function()
+		{
+			sendGeneralSettingsAJAX();
+		};
+		
+		var hasTrustedHostsChanged = false,
+			hosts = $('input[name=trusted_host]');
+		if (hosts.length != originalTrustedHostCount)
+		{
+			hasTrustedHostsChanged = true;
+		}
+		else
+		{
+			hosts.each(function() {
+				hasTrustedHostsChanged |= this.defaultValue != this.value;
+			});
+		}
+		
+		// if trusted hosts have changed, make sure to ask for confirmation
+		if (hasTrustedHostsChanged)
+		{
+			piwikHelper.modalConfirm('#confirmTrustedHostChange', {yes: doSubmit});
+		}
+		else
+		{
+			doSubmit();
+		}
 	});
 
 	$('input[name=mailUseSmtp]').click(function(){
@@ -90,4 +128,21 @@ $(document).ready( function() {
 	});
 	
 	$('#customLogo').change(function(){$("#logoUploadForm").submit()});
+	
+	// trusted hosts event handling
+	$('#trustedHostSettings .adminTable').on('click', '.remove-trusted-host', function(e) {
+		e.preventDefault();
+		$(this).parent().parent().remove();
+		return false;
+	});
+	$('#trustedHostSettings .add-trusted-host').click(function(e) {
+		e.preventDefault();
+		
+		// append new row to the table
+		$('#trustedHostSettings tbody').append('<tr>'
+		  + '<td><input name="trusted_host" type="text" value=""/></td>'
+		  + '<td><a href="#" class="remove-trusted-host">x</a></td>'
+		  + '</tr>');
+		return false;
+	});
 });

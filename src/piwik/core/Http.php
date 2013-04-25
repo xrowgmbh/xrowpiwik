@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Http.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -26,19 +25,29 @@ class Piwik_Http
 	static public function getTransportMethod()
 	{
 		$method = 'curl';
-		if(!function_exists('curl_init'))
+		if(!self::isCurlEnabled())
 		{
 			$method = 'fopen';
 			if(@ini_get('allow_url_fopen') != '1')
 			{
 				$method = 'socket';
-				if(!function_exists('fsockopen'))
+				if(!self::isSocketEnabled())
 				{
 					return null;
 				}
 			}
 		}
 		return $method;
+	}
+
+	protected static function isSocketEnabled()
+	{
+		return function_exists('fsockopen');
+	}
+
+	protected static function isCurlEnabled()
+	{
+		return function_exists('curl_init');
 	}
 
 	/**
@@ -53,10 +62,15 @@ class Piwik_Http
 	 * @param string  $destinationPath
 	 * @param int     $followDepth
 	 * @param bool    $acceptLanguage
+	 * @param array		   $byteRange For Range: header. Should be two element array of bytes, eg, array(0, 1024)
+	 *                                Doesn't work w/ fopen method.
+	 * @param bool         $getExtendedInfo True to return status code, headers & response, false if just response.
+	 * @param string       $httpMethod The HTTP method to use. Defaults to 'GET'.
 	 * @throws Exception
 	 * @return bool  true (or string) on success; false on HTTP response error code (1xx or 4xx)
 	 */
-	static public function sendHttpRequest($aUrl, $timeout, $userAgent = null, $destinationPath = null, $followDepth = 0, $acceptLanguage = false)
+	static public function sendHttpRequest($aUrl, $timeout, $userAgent = null, $destinationPath = null, $followDepth = 0, $acceptLanguage = false, $byteRange = false, $getExtendedInfo = false, $httpMethod = 'GET'
+)
 	{
 		// create output file
 		$file = null;
@@ -71,7 +85,7 @@ class Piwik_Http
 		}
 
 		$acceptLanguage = $acceptLanguage ? 'Accept-Language: '.$acceptLanguage : '';
-		return self::sendHttpRequestBy(self::getTransportMethod(), $aUrl, $timeout, $userAgent, $destinationPath, $file, $followDepth, $acceptLanguage); 			
+		return self::sendHttpRequestBy(self::getTransportMethod(), $aUrl, $timeout, $userAgent, $destinationPath, $file, $followDepth, $acceptLanguage, $acceptInvalidSslCertificate = false, $byteRange, $getExtendedInfo, $httpMethod);
 	}
 
 	/**
@@ -86,10 +100,27 @@ class Piwik_Http
 	 * @param int          $followDepth
 	 * @param bool|string  $acceptLanguage               Accept-language header
 	 * @param bool         $acceptInvalidSslCertificate  Only used with $method == 'curl'. If set to true (NOT recommended!) the SSL certificate will not be checked
+	 * @param array		   $byteRange For Range: header. Should be two element array of bytes, eg, array(0, 1024)
+	 *                                Doesn't work w/ fopen method.
+	 * @param bool         $getExtendedInfo True to return status code, headers & response, false if just response.
+	 * @param string       $httpMethod The HTTP method to use. Defaults to 'GET'.
 	 * @throws Exception
-	 * @return bool  true (or string) on success; false on HTTP response error code (1xx or 4xx)
+	 * @return bool  true (or string/array) on success; false on HTTP response error code (1xx or 4xx)
 	 */
-	static public function sendHttpRequestBy($method = 'socket', $aUrl, $timeout, $userAgent = null, $destinationPath = null, $file = null, $followDepth = 0, $acceptLanguage = false, $acceptInvalidSslCertificate = false)
+	static public function sendHttpRequestBy(
+		$method = 'socket',
+		$aUrl,
+		$timeout,
+		$userAgent = null,
+		$destinationPath = null,
+		$file = null,
+		$followDepth = 0,
+		$acceptLanguage = false,
+		$acceptInvalidSslCertificate = false,
+		$byteRange = false,
+		$getExtendedInfo = false,
+		$httpMethod = 'GET'
+	)
 	{
 		if ($followDepth > 5)
 		{
@@ -103,20 +134,40 @@ class Piwik_Http
 		$xff = 'X-Forwarded-For: '
 			. (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && !empty($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] . ',' : '')
 			. Piwik_IP::getIpFromHeader();
+
+		if(empty($userAgent))
+		{
+			$userAgent = self::getUserAgent();
+		}
+
 		$via = 'Via: '
 			. (isset($_SERVER['HTTP_VIA']) && !empty($_SERVER['HTTP_VIA']) ? $_SERVER['HTTP_VIA'] . ', ' : '')
-			. Piwik_Version::VERSION . ' Piwik'
+			. Piwik_Version::VERSION . ' '
 			. ($userAgent ? " ($userAgent)" : '');
-		$userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Piwik/'.Piwik_Version::VERSION;
+
+		// range header
+		$rangeHeader = '';
+		if (!empty($byteRange))
+		{
+			$rangeHeader = 'Range: bytes='.$byteRange[0].'-'.$byteRange[1]."\r\n";
+		}
 
 		// proxy configuration
 		$proxyHost = Piwik_Config::getInstance()->proxy['host'];
 		$proxyPort = Piwik_Config::getInstance()->proxy['port'];
 		$proxyUser = Piwik_Config::getInstance()->proxy['username'];
 		$proxyPassword = Piwik_Config::getInstance()->proxy['password'];
+		
+		// other result data
+		$status = null;
+		$headers = array();
 
 		if($method == 'socket')
 		{
+			if(!self::isSocketEnabled()) {
+				// can be triggered in tests
+				throw new Exception("HTTP socket support is not enabled (php function fsockopen is not available) ");
+			}
 			// initialization
 			$url = @parse_url($aUrl);
 			if($url === false || !isset($url['scheme']))
@@ -137,6 +188,16 @@ class Piwik_Http
 			}
 			$errno = null;
 			$errstr = null;
+			
+			if ((!empty($proxyHost) && !empty($proxyPort))
+				|| !empty($byteRange))
+			{
+				$httpVer = '1.1';
+			}
+			else
+			{
+				$httpVer = '1.0';
+			}
 
 			$proxyAuth = null;
 			if(!empty($proxyHost) && !empty($proxyPort))
@@ -147,13 +208,13 @@ class Piwik_Http
 				{
 					$proxyAuth = 'Proxy-Authorization: Basic '.base64_encode("$proxyUser:$proxyPassword") ."\r\n";
 				}
-				$requestHeader = "GET $aUrl HTTP/1.1\r\n";
+				$requestHeader = "$httpMethod $aUrl HTTP/$httpVer\r\n";
 			}
 			else
 			{
 				$connectHost = $host;
 				$connectPort = $port;
-				$requestHeader = "GET $path HTTP/1.0\r\n";
+				$requestHeader = "$httpMethod $path HTTP/$httpVer\r\n";
 			}
 
 			// connection attempt
@@ -171,6 +232,7 @@ class Piwik_Http
 				. ($acceptLanguage ? $acceptLanguage ."\r\n" : '') 
 				.$xff."\r\n"
 				.$via."\r\n"
+				.$rangeHeader
 				."Connection: close\r\n"
 				."\r\n";
 			fwrite($fsock, $requestHeader);
@@ -227,7 +289,15 @@ class Piwik_Http
 					{
 						if(is_resource($file)) { @fclose($file); }
 						@fclose($fsock);
-						return false;
+						
+						if (!$getExtendedInfo)
+						{
+							return false;
+						}
+						else
+						{
+							return array('status' => $status);
+						}
 					}
 
 					continue;
@@ -243,7 +313,20 @@ class Piwik_Http
 					{
 						throw new Exception('Unexpected redirect to Location: '.rtrim($line).' for status code '.$status);
 					}
-					return self::sendHttpRequestBy($method, trim($m[1]), $timeout, $userAgent, $destinationPath, $file, $followDepth+1, $acceptLanguage);
+					return self::sendHttpRequestBy(
+						$method,
+						trim($m[1]),
+						$timeout,
+						$userAgent,
+						$destinationPath,
+						$file,
+						$followDepth+1,
+						$acceptLanguage,
+						$acceptInvalidSslCertificate = false,
+						$byteRange,
+						$getExtendedInfo,
+						$httpMethod
+					);
 				}
 
 				// save expected content length for later verification
@@ -251,9 +334,12 @@ class Piwik_Http
 				{
 					$contentLength = (integer) $m[1];
 				}
+				
+				self::parseHeaderLine($headers, $line);
 			}
 
-			if(feof($fsock))
+			if (feof($fsock)
+				&& $httpMethod != 'HEAD')
 			{
 				throw new Exception('Unexpected end of transmission');
 			}
@@ -307,7 +393,8 @@ class Piwik_Http
 						'header' => 'User-Agent: '.$userAgent."\r\n"
 									.($acceptLanguage ? $acceptLanguage."\r\n" : '')
 									.$xff."\r\n"
-									.$via."\r\n",
+									.$via."\r\n"
+									.$rangeHeader,
 						'max_redirects' => 5, // PHP 5.1.0
 						'timeout' => $timeout, // PHP 5.2.1
 					)
@@ -340,7 +427,7 @@ class Piwik_Http
 			}
 			else
 			{
-				$response = @file_get_contents($aUrl, 0, $ctx);
+				$response = file_get_contents($aUrl, 0, $ctx);
 				$fileLength = Piwik_Common::strlen($response);
 			}
 
@@ -352,6 +439,10 @@ class Piwik_Http
 		}
 		else if($method == 'curl')
 		{
+			if(!self::isCurlEnabled()) {
+				// can be triggered in tests
+				throw new Exception("CURL is not enabled in php.ini, but is being used.");
+			}
 			$ch = @curl_init();
 
 			if(!empty($proxyHost) && !empty($proxyPort))
@@ -374,9 +465,11 @@ class Piwik_Http
 				CURLOPT_HTTPHEADER => array(
 					$xff,
 					$via,
+					$rangeHeader,
 					$acceptLanguage
 				),
-				CURLOPT_HEADER => false,
+				// only get header info if not saving directly to file
+				CURLOPT_HEADER => is_resource($file) ? false : true,
 				CURLOPT_CONNECTTIMEOUT => $timeout,
 			);
 			// Case archive.php is triggering archiving on https:// and the certificate is not valid
@@ -387,16 +480,15 @@ class Piwik_Http
 					CURLOPT_SSL_VERIFYPEER => false, 
 				);
 			}
+			@curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $httpMethod);
+			if ($httpMethod == 'HEAD')
+			{
+				@curl_setopt($ch, CURLOPT_NOBODY, true);
+			}
 			
 			@curl_setopt_array($ch, $curl_options);
+			self::configCurlCertificate($ch);
 
-			/*
-			 * use local list of Certificate Authorities, if available
-			 */
-			if(file_exists(PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem'))
-			{
-				@curl_setopt($ch, CURLOPT_CAINFO, PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem');
-			}
 
 			/*
 			 * as of php 5.2.0, CURLOPT_FOLLOWLOCATION can't be set if
@@ -440,9 +532,25 @@ class Piwik_Http
 				}
 				$response = '';
 			}
+			else
+			{
+				$header = '';
+				// redirects are included in the output html, so we look for the last line that starts w/ HTTP/...
+				// to split the response
+				while (substr($response, 0, 5) == "HTTP/")
+				{
+					list($header, $response) = explode("\r\n\r\n", $response, 2);
+				}
+				
+				foreach (explode("\r\n", $header) as $line)
+				{
+					self::parseHeaderLine($headers, $line);
+				}
+			}
 
 			$contentLength = @curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
 			$fileLength = is_resource($file) ? @curl_getinfo($ch, CURLINFO_SIZE_DOWNLOAD) : Piwik_Common::strlen($response);
+			$status = @curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 			@curl_close($ch);
 			unset($ch);
@@ -458,18 +566,153 @@ class Piwik_Http
 			@fclose($file);
 
 			$fileSize = filesize($destinationPath);
-			if((($contentLength > 0) && ($fileLength != $contentLength)) || ($fileSize != $fileLength))
+			if((($contentLength > 0) && ($fileLength != $contentLength))
+				|| ($fileSize != $fileLength))
 			{
 				throw new Exception('File size error: '.$destinationPath.'; expected '.$contentLength.' bytes; received '.$fileLength.' bytes; saved '.$fileSize.' bytes to file');
 			}
 			return true;
 		}
 
-		if(($contentLength > 0) && ($fileLength != $contentLength))
+		if (!$getExtendedInfo)
 		{
-			throw new Exception('Content length error: expected '.$contentLength.' bytes; received '.$fileLength.' bytes');
+			return trim($response);
 		}
-		return trim($response);
+		else
+		{
+			return array(
+				'status' => $status,
+				'headers' => $headers,
+				'data' => $response
+			);
+		}
+	}
+	
+	/**
+	 * Downloads the next chunk of a specific file. The next chunk's byte range
+	 * is determined by the existing file's size and the expected file size, which
+	 * is stored in the piwik_option table before starting a download.
+	 * 
+	 * Note this function uses the Range HTTP header to accomplish downloading in
+	 * parts.
+	 * 
+	 * @param string $url The url to download from.
+	 * @param string $outputPath The path to the file to save/append to.
+	 * @param bool $isContinuation True if this is the continuation of a download,
+	 *                             or if we're starting a fresh one.
+	 */
+	public static function downloadChunk( $url, $outputPath, $isContinuation )
+	{
+		// make sure file doesn't already exist if we're starting a new download
+		if (!$isContinuation
+			&& file_exists($outputPath))
+		{
+			throw new Exception(
+				Piwik_Translate('General_DownloadFail_FileExists', "'".$outputPath."'")
+				. ' ' . Piwik_Translate('General_DownloadPleaseRemoveExisting'));
+		}
+		
+		// if we're starting a download, get the expected file size & save as an option
+		$downloadOption = $outputPath.'_expectedDownloadSize';
+		if (!$isContinuation)
+		{
+			$expectedFileSizeResult = Piwik_Http::sendHttpRequest(
+				$url,
+				$timeout = 300,
+				$userAgent = null,
+				$destinationPath = null,
+				$followDepth = 0,
+				$acceptLanguage = false,
+				$byteRange = false,
+				$getExtendedInfo = true,
+				$httpMethod = 'HEAD'
+			);
+			
+			$expectedFileSize = 0;
+			if (isset($expectedFileSizeResult['headers']['Content-Length']))
+			{
+				$expectedFileSize = (int)$expectedFileSizeResult['headers']['Content-Length'];
+			}
+			
+			if ($expectedFileSize == 0)
+			{
+				Piwik::log(sprintf("HEAD request for '%s' failed, got following: %s", $url, print_r($expectedFileSizeResult, true)));
+				throw new Exception(Piwik_Translate('General_DownloadFail_HttpRequestFail'));
+			}
+			
+			Piwik_SetOption($downloadOption, $expectedFileSize);
+		}
+		else
+		{
+			$expectedFileSize = (int)Piwik_GetOption($downloadOption);
+			if ($expectedFileSize === false) // sanity check
+			{
+				throw new Exception("Trying to continue a download that never started?! That's not supposed to happen...");
+			}
+		}
+		
+		// if existing file is already big enough, then fail so we don't accidentally overwrite
+		// existing DB
+		$existingSize = file_exists($outputPath) ? filesize($outputPath) : 0;
+		if ($existingSize >= $expectedFileSize)
+		{
+			throw new Exception(
+				Piwik_Translate('General_DownloadFail_FileExistsContinue', "'".$outputPath."'")
+				. ' ' . Piwik_Translate('General_DownloadPleaseRemoveExisting'));
+		}
+		
+		// download a chunk of the file
+		$result = Piwik_Http::sendHttpRequest(
+			$url,
+			$timeout = 300,
+			$userAgent = null,
+			$destinationPath = null,
+			$followDepth = 0,
+			$acceptLanguage = false,
+			$byteRange = array($existingSize, min($existingSize + 1024 * 1024 - 1, $expectedFileSize)),
+			$getExtendedInfo = true
+		);
+		
+		if ($result === false
+			|| $result['status'] < 200
+			|| $result['status'] > 299)
+		{
+			$result['data'] = self::truncateStr($result['data'], 1024);
+			Piwik::log("Failed to download range '".$byteRange[0]."-".$byteRange[1]
+				. "' of file from url '$url'. Got result: ".print_r($result, true));
+			
+			throw new Exception(Piwik_Translate('General_DownloadFail_HttpRequestFail'));
+		}
+		
+		// write chunk to file
+		$f = fopen($outputPath, 'ab');
+		fwrite($f, $result['data']);
+		fclose($f);
+		
+		clearstatcache($clear_realpath_cache = true, $outputPath);
+		return array(
+			'current_size' => filesize($outputPath),
+			'expected_file_size' => $expectedFileSize,
+		);
+	}
+
+	/**
+	 * Will configure CURL handle $ch
+	 * to use local list of Certificate Authorities,
+	 */
+	public static function configCurlCertificate( &$ch )
+	{
+		if (file_exists(PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem'))
+		{
+			@curl_setopt($ch, CURLOPT_CAINFO, PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem');
+		}
+	}
+
+	public static function getUserAgent()
+	{
+		return !empty($_SERVER['HTTP_USER_AGENT'])
+			? $_SERVER['HTTP_USER_AGENT']
+			: 'Piwik/' . Piwik_Version::VERSION;
 	}
 
 	/**
@@ -486,5 +729,40 @@ class Piwik_Http
 		@ignore_user_abort(true);
 		Piwik::setMaxExecutionTime(0);
 		return self::sendHttpRequest($url, 10, 'Update', $destinationPath, $tries);
+	}
+	
+	/**
+	 * Utility function, parses an HTTP header line into key/value & sets header
+	 * array with them.
+	 * 
+	 * @param array $headers
+	 * @param string $line
+	 */
+	private static function parseHeaderLine( &$headers, $line )
+	{
+		$parts = explode(':', $line, 2);
+		if (count($parts) == 1)
+		{
+			return;
+		}
+		
+		list($name, $value) = $parts;
+		$headers[trim($name)] = trim($value);
+	}
+	
+	/**
+	 * Utility function that truncates a string to an arbitrary limit.
+	 * 
+	 * @param string $str The string to truncate.
+	 * @param int $limit The maximum length of the truncated string.
+	 * @return string
+	 */
+	private static function truncateStr( $str, $limit )
+	{
+		if (strlen($str) > $limit)
+		{
+			return substr($str, 0, $limit).'...';
+		}
+		return $str;
 	}
 }

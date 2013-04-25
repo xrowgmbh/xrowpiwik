@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ColumnDelete.php 6836 2012-08-19 17:10:20Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -33,6 +32,13 @@ class Piwik_DataTable_Filter_ColumnDelete extends Piwik_DataTable_Filter
 	 * @var array
 	 */
 	private $columnsToKeep;
+
+	/**
+	 * Delete the column, only if the value was zero
+	 *
+	 * @var bool
+	 */
+	private $deleteIfZeroOnly;
 	
 	/**
 	 * Constructor.
@@ -44,7 +50,7 @@ class Piwik_DataTable_Filter_ColumnDelete extends Piwik_DataTable_Filter
 	 *                                    comma-separated list of column names. Columns not in
 	 *                                    this list will be removed.
 	 */
-	public function __construct( $table, $columnsToRemove, $columnsToKeep = array() )
+	public function __construct( $table, $columnsToRemove, $columnsToKeep = array(), $deleteIfZeroOnly = false )
 	{
 		parent::__construct($table);
 		
@@ -60,21 +66,21 @@ class Piwik_DataTable_Filter_ColumnDelete extends Piwik_DataTable_Filter
 		
 		$this->columnsToRemove = $columnsToRemove;
 		$this->columnsToKeep = array_flip($columnsToKeep); // flip so we can use isset instead of in_array
-		
-		// always do recursive filter
-		$this->enableRecursive(true);
+		$this->deleteIfZeroOnly = $deleteIfZeroOnly;
 	}
-	
+
 	/**
 	 * Filters the given DataTable. Removes columns that are not desired from
 	 * each DataTable row.
-	 * 
+	 *
 	 * @param Piwik_DataTable $table
 	 */
 	public function filter($table)
 	{
+		// always do recursive filter
+		$this->enableRecursive(true);
 		$recurse = false; // only recurse if there are columns to remove/keep
-		
+
 		// remove columns specified in $this->columnsToRemove
 		if (!empty($this->columnsToRemove))
 		{
@@ -82,6 +88,14 @@ class Piwik_DataTable_Filter_ColumnDelete extends Piwik_DataTable_Filter
 			{
 				foreach ($this->columnsToRemove as $column)
 				{
+					if($this->deleteIfZeroOnly)
+					{
+						$value = $row->getColumn($column);
+						if($value === false || !empty($value))
+						{
+							continue;
+						}
+					}
 					$row->deleteColumn($column);
 				}
 			}

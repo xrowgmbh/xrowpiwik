@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: SearchEngines.php 6273 2012-05-18 22:09:10Z SteveG $
  *
  * @category Piwik
  * @package DataFiles
@@ -69,6 +68,10 @@ if(!isset($GLOBALS['Piwik_SearchEngines'] ))
 
 		// 1und1
 		'search.1und1.de'			=> array('1und1', 'su', 'search/web/?su={k}'),
+
+		// 360search
+		'so.360.cn'					=> array('360search', 'q', 's?q={k}', array('UTF-8', 'gb2312')),
+		'www.so.com'				=> array('360search', 'q', 's?q={k}', array('UTF-8', 'gb2312')),
 
 		// Abacho
 		'www.abacho.de'				=> array('Abacho', 'q', 'suche?q={k}'),
@@ -421,6 +424,7 @@ if(!isset($GLOBALS['Piwik_SearchEngines'] ))
 		'www.fastweb.it'			=> array('Google'),
 		'search.juno.com'			=> array('Google', 'query'),
 		'find.tdc.dk'				=> array('Google'),
+		'it.luna.tv'				=> array('Google'),
 		'searchresults.verizon.com'	=> array('Google'),
 		'search.walla.co.il'		=> array('Google'),
 		'search.alot.com'			=> array('Google'),
@@ -507,6 +511,7 @@ if(!isset($GLOBALS['Piwik_SearchEngines'] ))
 		// InfoSpace (and related web properties)
 		'infospace.com'				=> array('InfoSpace', 'q', '/search/web?q={k}'),
 		'dogpile.com'				=> array('InfoSpace'),
+		'tattoodle.com'				=> array('InfoSpace'),
 		'metacrawler.com'			=> array('InfoSpace'),
 		'webfetch.com'				=> array('InfoSpace'),
 		'webcrawler.com'			=> array('InfoSpace'),
@@ -852,7 +857,7 @@ if(!isset($GLOBALS['Piwik_SearchEngines'] ))
 		'www.walhello.nl'			=> array('Walhello'),
 
 		// Web.de
-		'suche.web.de'				=> array('Web.de', 'su', 'search/web/?su={k}'),
+		'suche.web.de'				=> array('Web.de', array('su', 'q'), 'search/web/?su={k}'),
 
 		// Web.nl
 		'www.web.nl'				=> array('Web.nl', 'zoekwoord'),
@@ -918,11 +923,13 @@ if(!isset($GLOBALS['Piwik_SearchEngines'] ))
 		'search.yam.com'			=> array('Yam', 'k', 'Search/Web/?SearchType=web&k={k}'),
 
 		// Yandex
-		'yandex.com'				=> array('Yandex', 'text', 'yandsearch?text={k}'),
+		'yandex.ru'				=> array('Yandex', 'text', 'yandsearch?text={k}'),
+		'yandex.com'				=> array('Yandex'),
 		'yandex.{}'					=> array('Yandex'),
 
 		// Yandex Images
-		'images.yandex.com'			=> array('Yandex Images', 'text', 'yandsearch?text={k}'),
+		'images.yandex.ru'			=> array('Yandex Images', 'text', 'yandsearch?text={k}'),
+		'images.yandex.com'			=> array('Yandex Images'),
 		'images.yandex.{}'			=> array('Yandex Images'),
 
 		// Yasni

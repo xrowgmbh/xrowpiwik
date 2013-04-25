@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ScheduledTime.php 6550 2012-07-25 07:24:58Z JulienM $
  * 
  * @category Piwik
  * @package Piwik
@@ -34,6 +33,18 @@ abstract class Piwik_ScheduledTime
 	 * @var integer
 	 */
 	public $day = 1;
+
+	static public function getScheduledTimeForPeriod($period)
+	{
+		switch($period)
+		{
+			case 'month': return new Piwik_ScheduledTime_Monthly();
+			case 'week': return new Piwik_ScheduledTime_Weekly();
+			case 'day': return new Piwik_ScheduledTime_Daily();
+
+			default: throw new Exception('period ' . $period . 'is undefined.');
+		}
+	}
 
 	/**
 	 * Returns the system time used by subclasses to compute schedulings.

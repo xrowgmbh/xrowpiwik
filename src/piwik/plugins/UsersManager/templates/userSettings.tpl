@@ -1,5 +1,3 @@
-{assign var=showSitesSelection value=false}
-{assign var=showPeriodSelection value=false}
 {include file="CoreAdminHome/templates/header.tpl"}
 {loadJavascriptTranslations plugins='UsersManager'}
 <h2>{'UsersManager_MenuUserSettings'|translate}</h2>
@@ -41,9 +39,10 @@
 	<fieldset>
 		<label><input type="radio" value="MultiSites" name="defaultReport"{if $defaultReport=='MultiSites'} checked="checked"{/if} /> {'General_AllWebsitesDashboard'|translate}</label><br />
 		<label style="padding-right:12px;"><input type="radio" value="1" name="defaultReport"{if $defaultReport!='MultiSites'} checked="checked"{/if} /> {'General_DashboardForASpecificWebsite'|translate}</label>
+		{if $defaultReport=='MultiSites'}{assign var=defaultReportIdSite value=1}{else}{assign var=defaultReportIdSite value=$defaultReport}{/if}
 		{include file="CoreHome/templates/sites_selection.tpl"
-			siteName=$defaultReportSiteName idSite=$defaultReport switchSiteOnSelect=false showAllSitesItem=false
-			showSelectedSite=false}
+			siteName=$defaultReportSiteName idSite=$defaultReportIdSite switchSiteOnSelect=false showAllSitesItem=false
+			showSelectedSite=false siteSelectorId='defaultReportSiteSelector'}
 	</fieldset>
 	</td>
 </tr>
@@ -58,6 +57,7 @@
 	</td>
 </tr>
 
+{if isset($isValidHost) && $isValidHost}
 <tr>
 	<td><label for="email">{'UsersManager_ChangePassword'|translate} </label></td>
 	<td><input size="25" value="" autocomplete="off" id="password" type="password" />
@@ -66,7 +66,14 @@
 	 <span class='form-description'> {'UsersManager_TypeYourPasswordAgain'|translate}</span>
 	 </td>
 </tr>
+{/if}
 </table>
+{if !isset($isValidHost) || !$isValidHost}
+<div class="ajaxSuccess">
+	{'UsersManager_InjectedHostCannotChangePwd'|translate:$invalidHost}&nbsp;{if !$isSuperUser}{'UsersManager_EmailYourAdministrator'|translate:$invalidHostMailLinkStart:'</a>'}{/if}
+</div>
+<br/>
+{/if}
 
 {ajaxErrorDiv id=ajaxErrorUserSettings}
 {ajaxLoadingDiv id=ajaxLoadingUserSettings}

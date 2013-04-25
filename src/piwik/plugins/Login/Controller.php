@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6900 2012-09-02 11:14:40Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_Login
@@ -81,9 +80,10 @@ class Piwik_Login_Controller extends Piwik_Controller
 
 		$view = Piwik_View::factory('login');
 		$view->AccessErrorString = $messageNoAccess;
-		$view->infoMessage = $infoMessage;
+		$view->infoMessage = nl2br($infoMessage);
 		$view->addForm( $form );
 		$this->configureView($view);
+		self::setHostValidationVariablesView($view);
 		echo $view->render();
 	}
 
@@ -494,7 +494,13 @@ class Piwik_Login_Controller extends Piwik_Controller
 	public function logout()
 	{
 		self::clearSession();
-		Piwik::redirectToModule('CoreHome');
+
+		$logoutUrl = @Piwik_Config::getInstance()->General['login_logout_url'];
+		if(empty($logoutUrl)) {
+			Piwik::redirectToModule('CoreHome');
+		} else {
+			Piwik_Url::redirectToUrl($logoutUrl);
+		}
 	}
 
 	/**

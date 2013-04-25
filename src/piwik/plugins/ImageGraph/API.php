@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6973 2012-09-11 22:34:16Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
@@ -29,8 +28,8 @@ class Piwik_ImageGraph_API
 	const TRUNCATE_KEY = 'truncate';
 	const WIDTH_KEY = 'width';
 	const HEIGHT_KEY = 'height';
-	const MAX_WIDTH = 1900;
-	const MAX_HEIGHT = 1024;
+	const MAX_WIDTH = 2048;
+	const MAX_HEIGHT = 2048;
 
 	static private $DEFAULT_PARAMETERS = array(
 		Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_LINE => array(
@@ -85,6 +84,7 @@ class Piwik_ImageGraph_API
 	const DEFAULT_FONT = 'tahoma.ttf';
 	const UNICODE_FONT = 'unifont.ttf';
 	const DEFAULT_FONT_SIZE = 9;
+	const DEFAULT_LEGEND_FONT_SIZE_OFFSET = 2;
 
 	// number of row evolutions to plot when no labels are specified, can be overridden using &filter_limit
 	const DEFAULT_NB_ROW_EVOLUTIONS = 5;
@@ -107,8 +107,8 @@ class Piwik_ImageGraph_API
 
 	public function get($idSite, $period, $date, $apiModule, $apiAction, $graphType = false,
 						$outputType = Piwik_ImageGraph_API::GRAPH_OUTPUT_INLINE, $columns = false, $labels = false, $showLegend = true,
-						$width = false, $height = false, $fontSize = Piwik_ImageGraph_API::DEFAULT_FONT_SIZE, $aliasedGraph = true,
-						$idGoal = false, $colors = false, $idSubtable = false)
+						$width = false, $height = false, $fontSize = Piwik_ImageGraph_API::DEFAULT_FONT_SIZE, $legendFontSize = false,
+						$aliasedGraph = true, $idGoal = false, $colors = false, $idSubtable = false, $legendAppendMetric = true)
 	{
 		Piwik::checkUserHasViewAccess($idSite);
 
@@ -155,6 +155,11 @@ class Piwik_ImageGraph_API
 			if(!$reportHasDimension && !$isMultiplePeriod)
 			{
 				throw new Exception('The graph cannot be drawn for this combination of \'date\' and \'period\' parameters.');
+			}
+
+			if(empty($legendFontSize))
+			{
+				$legendFontSize = (int)$fontSize + self::DEFAULT_LEGEND_FONT_SIZE_OFFSET;
 			}
 
 			if(empty($graphType))
@@ -305,7 +310,8 @@ class Piwik_ImageGraph_API
 					$plottedMetric,
 					$languageLoaded,
 					$idGoal,
-					$plottedMetric
+					$legendAppendMetric,
+					$labelUseAbsoluteUrl = false
 				);
 
 				//@review this test will need to be updated after evaluating the @review comment in API/API.php
@@ -374,7 +380,8 @@ class Piwik_ImageGraph_API
 					$languageLoaded,
 					$showTimer = true,
 					$hideMetricsDoc = false,
-					$idSubtable
+					$idSubtable,
+					$showRawMetrics = false
 				);
 			}
 			// prepare abscissa and ordinate series
@@ -437,6 +444,10 @@ class Piwik_ImageGraph_API
 				{
 					// $periodsData[$i] instanceof Piwik_DataTable_Simple
 					// $rows instanceof Piwik_DataTable_Row[]
+					if(empty($periodsData[$i]))
+					{
+						continue;
+					}
 					$rows = $periodsData[$i]->getRows();
 
 					if(array_key_exists(0, $rows))
@@ -483,6 +494,7 @@ class Piwik_ImageGraph_API
 			$graph->setHeight($height);
 			$graph->setFont($font);
 			$graph->setFontSize($fontSize);
+			$graph->setLegendFontSize($legendFontSize);
 			$graph->setOrdinateLabels($ordinateLabels);
 			$graph->setShowLegend($showLegend);
 			$graph->setAliasedGraph($aliasedGraph);

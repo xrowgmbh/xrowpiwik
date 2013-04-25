@@ -33,7 +33,7 @@
 // |         Stephan Schmidt <schst@php.net>                               |
 // +-----------------------------------------------------------------------+
 //
-// $Id: Dispatcher.php 1296 2009-07-08 04:19:14Z vipsoft $
+// $Id$
 
 /**
  * Pseudo 'static property' for Notification object

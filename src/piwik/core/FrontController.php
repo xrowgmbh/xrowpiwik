@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FrontController.php 6808 2012-08-17 13:52:36Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -122,11 +121,10 @@ class Piwik_FrontController
 		{
 			$action = $controller->getDefaultAction();
 		}
-		
-//		Piwik::log("Dispatching $module / $action, parameters: ".var_export($parameters, $return = true));
+
 		if( !is_callable(array($controller, $action)))
 		{
-			throw new Exception("Action $action not found in the controller $controllerClassName.");				
+			throw new Exception("Action '$action' not found in the controller '$controllerClassName'.");				
 		}
 		
 		// Generic hook that plugins can use to modify any input to the function, 
@@ -140,7 +138,8 @@ class Piwik_FrontController
 			Piwik_PostEvent('FrontController.NoAccessException', $e);					
 		} catch(Exception $e) {
 			$debugTrace = $e->getTraceAsString();
-			Piwik_ExitWithMessage($e->getMessage(), Piwik::shouldLoggerLog() ? $debugTrace : '', true);
+			$message = Piwik_Common::sanitizeInputValue($e->getMessage());
+			Piwik_ExitWithMessage($message, '' /* $debugTrace */, true);
 		}
 	}
 	
@@ -328,8 +327,6 @@ class Piwik_FrontController
 						
 			Piwik_ExitWithMessage($e->getMessage(), false, true);
 		}
-		
-//		Piwik::log('End FrontController->init() - Request: '. var_export($_REQUEST, true));
 	}
 	
 	protected function handleMaintenanceMode()

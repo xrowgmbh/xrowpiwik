@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6596 2012-07-30 20:01:36Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_DBStats

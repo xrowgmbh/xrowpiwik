@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Archive.php 6605 2012-07-31 06:48:37Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -75,6 +74,10 @@ abstract class Piwik_Archive
 	const INDEX_ECOMMERCE_ORDERS = 26;
 	const INDEX_ECOMMERCE_ITEM_PRICE_VIEWED = 27;
 
+	// Site Search
+	const INDEX_SITE_SEARCH_HAS_NO_RESULT = 28;
+	const INDEX_PAGE_IS_FOLLOWING_SITE_SEARCH_NB_HITS = 29;
+
 	// Goal reports
 	const INDEX_GOAL_NB_CONVERSIONS = 1;
 	const INDEX_GOAL_REVENUE = 2;
@@ -113,7 +116,8 @@ abstract class Piwik_Archive
 				Piwik_Archive::INDEX_PAGE_ENTRY_NB_ACTIONS => 'entry_nb_actions',
 				Piwik_Archive::INDEX_PAGE_ENTRY_SUM_VISIT_LENGTH => 'entry_sum_visit_length',
 				Piwik_Archive::INDEX_PAGE_ENTRY_BOUNCE_COUNT => 'entry_bounce_count',
-				
+				Piwik_Archive::INDEX_PAGE_IS_FOLLOWING_SITE_SEARCH_NB_HITS => 'nb_hits_following_search',
+
 				// Items reports metrics
 				Piwik_Archive::INDEX_ECOMMERCE_ITEM_REVENUE => 'revenue',
 				Piwik_Archive::INDEX_ECOMMERCE_ITEM_QUANTITY => 'quantity',
@@ -149,6 +153,24 @@ abstract class Piwik_Archive
 				'revenue' 					=> Piwik_Archive::INDEX_REVENUE,
 				'goals'						=> Piwik_Archive::INDEX_GOALS,
 				'sum_daily_nb_uniq_visitors' => Piwik_Archive::INDEX_SUM_DAILY_NB_UNIQ_VISITORS,
+	);
+	
+	/**
+	 * Metrics calculated and archived by the Actions plugin.
+	 * 
+	 * @var array
+	 */
+	public static $actionsMetrics = array(
+		'nb_pageviews',
+		'nb_uniq_pageviews',
+		'nb_downloads',
+		'nb_uniq_downloads',
+		'nb_outlinks',
+		'nb_uniq_outlinks',
+		'nb_searches',
+		'nb_keywords',
+		'nb_hits',
+		'nb_hits_following_search',
 	);
 	
 	const LABEL_ECOMMERCE_CART = 'ecommerceAbandonedCart';
@@ -194,8 +216,9 @@ abstract class Piwik_Archive
 		}
 		
 		// idSite=1,3 or idSite=all
-		if( count($sites) > 1 
-			|| $idSite === 'all' )
+		if( $idSite === 'all'
+			|| is_array($idSite)
+			|| count($sites) > 1 )
 		{
 			$archive = new Piwik_Archive_Array_IndexedBySite($sites, $period, $strDate, $segment, $_restrictSitesToLogin);
 		}
@@ -238,7 +261,8 @@ abstract class Piwik_Archive
 		}
 		else
 		{
-			if(is_string($strDate))
+			$oDate = $strDate;
+			if(!($strDate instanceof Piwik_Date))
 			{
 				if($strDate == 'now' || $strDate == 'today')
 				{
@@ -249,10 +273,6 @@ abstract class Piwik_Archive
 					$strDate = date('Y-m-d', Piwik_Date::factory('now', $tz)->subDay(1)->getTimestamp());
 				}
 				$oDate = Piwik_Date::factory($strDate);
-			}
-			else
-			{
-				$oDate = $strDate;
 			}
 			$date = $oDate->toString();
 			$oPeriod = Piwik_Period::factory($strPeriod, $oDate);
@@ -328,7 +348,7 @@ abstract class Piwik_Archive
 	 * @param string      $segment
 	 * @param bool        $expanded
 	 * @param null        $idSubtable
-	 * @return Piwik_DataTable
+	 * @return Piwik_DataTable|Piwik_DataTable_Array
 	 */
 	static public function getDataTableFromArchive($name, $idSite, $period, $date, $segment, $expanded, $idSubtable = null )
 	{
@@ -435,10 +455,10 @@ abstract class Piwik_Archive
 	static public function isMultiplePeriod($dateString, $period)
 	{
 		return 	(preg_match('/^(last|previous){1}([0-9]*)$/D', $dateString, $regs)
-				|| Piwik_Period_Range::parseDateRange($dateString))
-				&& $period != 'range';
+			|| Piwik_Period_Range::parseDateRange($dateString))
+			&& $period != 'range';
 	}
-	
+
 	/**
 	 * Indicate if $idSiteString corresponds to multiple sites.
 	 * 

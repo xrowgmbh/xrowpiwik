@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Countries.php 5915 2012-02-25 22:14:13Z vipsoft $
  *
  * @category Piwik
  * @package DataFiles

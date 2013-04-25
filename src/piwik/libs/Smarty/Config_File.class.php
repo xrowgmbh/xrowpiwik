@@ -29,7 +29,7 @@
  * @package Smarty
  */
 
-/* $Id: Config_File.class.php 1873 2010-02-25 15:22:29Z vipsoft $ */
+/* $Id$ */
 
 /**
  * Config file reading class

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Translate.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -167,12 +166,11 @@ class Piwik_Translate
 		}
 		$js = substr($js,0,-1);
 		$js .= '};';
-		$js .=	'if(typeof(piwik_translations) == \'undefined\') { var piwik_translations = new Object; }'.
+		$js .=	"\n".'if(typeof(piwik_translations) == \'undefined\') { var piwik_translations = new Object; }'.
 				'for(var i in translations) { piwik_translations[i] = translations[i];} ';
 		$js .= 'function _pk_translate(translationStringId) { '.
 			'if( typeof(piwik_translations[translationStringId]) != \'undefined\' ){  return piwik_translations[translationStringId]; }'.
-			'return "The string "+translationStringId+" was not loaded in javascript. Make sure it is suffixed with _js and that you called  {loadJavascriptTranslations plugins=\'\$YOUR_PLUGIN_NAME\'} before your javascript code.";}';
-		
+			'return "The string "+translationStringId+" was not loaded in javascript. Make sure it is suffixed with _js and that you called  %7BloadJavascriptTranslations plugins=\'\$YOUR_PLUGIN_NAME\'%7D before your javascript code.";}';
 		return $js;
 	}
 
@@ -207,7 +205,7 @@ function Piwik_Translate($string, $args = array())
 	{
 		$string = $GLOBALS['Piwik_translations'][$string];
 	}
-	if(count($args) == 0) 
+	if(count($args) == 0)
 	{
 		return $string;
 	}
@@ -224,8 +222,7 @@ function Piwik_Translate($string, $args = array())
  */
 function Piwik_TranslateException($message, $args = array())
 {
-	try
-	{
+	try {
 		return Piwik_Translate($message, $args);		
 	} 
 	catch(Exception $e)

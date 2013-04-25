@@ -1,5 +1,3 @@
-{assign var=showSitesSelection value=false}
-{assign var=showPeriodSelection value=false}
 {include file="CoreAdminHome/templates/header.tpl"}
 
 <h2>{'VisitorGenerator_VisitorGenerator'|translate}</h2>
@@ -29,7 +27,10 @@
 <input type="hidden" value="{$token_auth}" name="token_auth" />
 <input type="hidden" value="{$nonce}" name="form_nonce" />
 <br/>
-NOTE: It might take a few minutes to generate visits and actions, please be patient...<br/><br/>
+
+	NOTE: It might take a few minutes to generate visits and actions, please be patient...<br/>
+	There is also a faster tool that will import large test data in Piwik, see the <a href='https://github.com/piwik/piwik/tree/master/tests#testing-data'>README</a>.</p>
+	<br/>
 <input type="submit" value="{'VisitorGenerator_Submit'|translate}" name="submit" class="submit" />
 </form>
 

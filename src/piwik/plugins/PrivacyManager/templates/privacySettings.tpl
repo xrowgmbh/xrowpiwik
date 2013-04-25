@@ -1,5 +1,3 @@
-{assign var=showSitesSelection value=false}
-{assign var=showPeriodSelection value=false}
 {include file="CoreAdminHome/templates/header.tpl"}
 
 {if $isSuperUser}
@@ -33,10 +31,10 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 		</table>
 	</div>
 	<div id="anonymizeIPenabled">
-		<table class="adminTable">
+		<table class="adminTable" style='width:800px;'>
 			<tr>
 				<td width="250">{'PrivacyManager_AnonymizeIpMaskLengtDescription'|translate}</td>
-				<td>
+				<td width="500">
 					<label><input type="radio" name="maskLength" value="1" {if $anonymizeIP.maskLength eq '1'}
 								  checked {/if}/> {'PrivacyManager_AnonymizeIpMaskLength'|translate:"1":"192.168.100.xxx"}
 					</label><br/>
@@ -44,6 +42,9 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 								  checked {/if}/> {'PrivacyManager_AnonymizeIpMaskLength'|translate:"2":"192.168.xxx.xxx"} <span class="form-description">{'General_Recommended'|translate}</span></label><br/>
 					<label><input type="radio" name="maskLength" value="3" {if $anonymizeIP.maskLength eq '3'}
 								  checked {/if}/> {'PrivacyManager_AnonymizeIpMaskLength'|translate:"3":"192.xxx.xxx.xxx"}</label>
+				</td>
+				<td width="200">
+					{'PrivacyManager_GeolocationAnonymizeIpNote'|translate|inlineHelp}
 				</td>
 			</tr>
 		</table>
@@ -177,7 +178,7 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 		<tr id="deleteSchedulingSettings">
 			<td width="250">{'PrivacyManager_DeleteSchedulingSettings'|translate}<br/></td>
 			<td width="500">
-				{'PrivacyManager_DeleteDataInterval'|translate}
+				<label>{'PrivacyManager_DeleteDataInterval'|translate}
 				<select id="deleteLowestInterval" name="deleteLowestInterval">
 					<option {if $deleteData.config.delete_logs_schedule_lowest_interval eq '1'} selected="selected" {/if}
 																								value="1"> {'CoreHome_PeriodDay'|translate}</option>
@@ -185,7 +186,7 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 																								value="7">{'CoreHome_PeriodWeek'|translate}</option>
 					<option {if $deleteData.config.delete_logs_schedule_lowest_interval eq '30'} selected="selected" {/if}
 																								 value="30">{'CoreHome_PeriodMonth'|translate}</option>
-				</select><br/><br/>
+				</select></label><br/><br/>
 			</td>
 			<td width="200">
 				{capture assign=purgeStats}

@@ -4,7 +4,7 @@
 	<form method="post" style="padding: 8px;" >
 	  <div align="left" class="mediumtext">
 		  {'Installation_SetupWebSiteURL'|translate|ucfirst} 
-		  <input type="text" id="seoUrl" size="30" value="{$urlToRank|escape:'html'}" class="textbox" />
+		  <input type="text" id="seoUrl" size="15" value="{$urlToRank|escape:'html'}" class="textbox" />
 		  <span style="padding-left:2px;"> 
 		  <input type="submit" id="rankbutton" value="{'SEO_Rank'|translate}" />
 		  </span>
@@ -28,8 +28,7 @@
 	   					<div style='margin-left:15px'>
 		   					{if isset($rank.rank)}{$rank.rank}{else}-{/if}
 		   					{if $rank.id=='pagerank'} /10 
-		   					{elseif $rank.id=='yahoo-bls'} {'SEO_Backlinks'|translate} 
-		   					{elseif $rank.id=='yahoo-pages'} {'SEO_Pages'|translate}
+		   					{elseif $rank.id=='google-index' || $rank.id=='bing-index'} {'SEO_Pages'|translate}
 		   					{/if}
 	   					</div>	
    					</td>

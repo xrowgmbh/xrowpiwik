@@ -121,11 +121,9 @@ function isDateInCurrentPeriod( date )
 	return [true, ''];
 }
 
-var updateDate;
-function getDatePickerOptions()
+piwik.getBaseDatePickerOptions = function(defaultDate)
 {
 	return {
-		onSelect: function () { updateDate.apply(this, arguments); },
 		showOtherMonths: false,
 		dateFormat: 'yy-mm-dd',
 		firstDay: 1,
@@ -134,63 +132,72 @@ function getDatePickerOptions()
 		prevText: "",
 		nextText: "",
 		currentText: "",
-		beforeShowDay: isDateInCurrentPeriod,
-		defaultDate: currentDate,
+		defaultDate: defaultDate,
 		changeMonth: true,
 		changeYear: true,
-		stepMonths: selectedPeriod == 'year' ? 12 : 1,
+		stepMonths: 1,
 		// jquery-ui-i18n 1.7.2 lacks some translations, so we use our own
 		dayNamesMin: [
-			_pk_translate('CoreHome_DaySu_js'),
-			_pk_translate('CoreHome_DayMo_js'),
-			_pk_translate('CoreHome_DayTu_js'),
-			_pk_translate('CoreHome_DayWe_js'),
-			_pk_translate('CoreHome_DayTh_js'),
-			_pk_translate('CoreHome_DayFr_js'),
-			_pk_translate('CoreHome_DaySa_js')],
+			_pk_translate('General_DaySu_js'),
+			_pk_translate('General_DayMo_js'),
+			_pk_translate('General_DayTu_js'),
+			_pk_translate('General_DayWe_js'),
+			_pk_translate('General_DayTh_js'),
+			_pk_translate('General_DayFr_js'),
+			_pk_translate('General_DaySa_js')],
 		dayNamesShort: [
-			_pk_translate('CoreHome_ShortDay_1_js'),
-			_pk_translate('CoreHome_ShortDay_2_js'),
-			_pk_translate('CoreHome_ShortDay_3_js'),
-			_pk_translate('CoreHome_ShortDay_4_js'),
-			_pk_translate('CoreHome_ShortDay_5_js'),
-			_pk_translate('CoreHome_ShortDay_6_js'),
-			_pk_translate('CoreHome_ShortDay_7_js')],
+			_pk_translate('General_ShortDay_1_js'),
+			_pk_translate('General_ShortDay_2_js'),
+			_pk_translate('General_ShortDay_3_js'),
+			_pk_translate('General_ShortDay_4_js'),
+			_pk_translate('General_ShortDay_5_js'),
+			_pk_translate('General_ShortDay_6_js'),
+			_pk_translate('General_ShortDay_7_js')],
 		dayNames: [
-			_pk_translate('CoreHome_LongDay_1_js'),
-			_pk_translate('CoreHome_LongDay_2_js'),
-			_pk_translate('CoreHome_LongDay_3_js'),
-			_pk_translate('CoreHome_LongDay_4_js'),
-			_pk_translate('CoreHome_LongDay_5_js'),
-			_pk_translate('CoreHome_LongDay_6_js'),
-			_pk_translate('CoreHome_LongDay_7_js')],
+			_pk_translate('General_LongDay_1_js'),
+			_pk_translate('General_LongDay_2_js'),
+			_pk_translate('General_LongDay_3_js'),
+			_pk_translate('General_LongDay_4_js'),
+			_pk_translate('General_LongDay_5_js'),
+			_pk_translate('General_LongDay_6_js'),
+			_pk_translate('General_LongDay_7_js')],
 		monthNamesShort: [
-			_pk_translate('CoreHome_ShortMonth_1_js'),
-			_pk_translate('CoreHome_ShortMonth_2_js'),
-			_pk_translate('CoreHome_ShortMonth_3_js'),
-			_pk_translate('CoreHome_ShortMonth_4_js'),
-			_pk_translate('CoreHome_ShortMonth_5_js'),
-			_pk_translate('CoreHome_ShortMonth_6_js'),
-			_pk_translate('CoreHome_ShortMonth_7_js'),
-			_pk_translate('CoreHome_ShortMonth_8_js'),
-			_pk_translate('CoreHome_ShortMonth_9_js'),
-			_pk_translate('CoreHome_ShortMonth_10_js'),
-			_pk_translate('CoreHome_ShortMonth_11_js'),
-			_pk_translate('CoreHome_ShortMonth_12_js')],
+			_pk_translate('General_ShortMonth_1_js'),
+			_pk_translate('General_ShortMonth_2_js'),
+			_pk_translate('General_ShortMonth_3_js'),
+			_pk_translate('General_ShortMonth_4_js'),
+			_pk_translate('General_ShortMonth_5_js'),
+			_pk_translate('General_ShortMonth_6_js'),
+			_pk_translate('General_ShortMonth_7_js'),
+			_pk_translate('General_ShortMonth_8_js'),
+			_pk_translate('General_ShortMonth_9_js'),
+			_pk_translate('General_ShortMonth_10_js'),
+			_pk_translate('General_ShortMonth_11_js'),
+			_pk_translate('General_ShortMonth_12_js')],
 		monthNames: [
-			_pk_translate('CoreHome_MonthJanuary_js'),
-			_pk_translate('CoreHome_MonthFebruary_js'),
-			_pk_translate('CoreHome_MonthMarch_js'),
-			_pk_translate('CoreHome_MonthApril_js'),
-			_pk_translate('CoreHome_MonthMay_js'),
-			_pk_translate('CoreHome_MonthJune_js'),
-			_pk_translate('CoreHome_MonthJuly_js'),
-			_pk_translate('CoreHome_MonthAugust_js'),
-			_pk_translate('CoreHome_MonthSeptember_js'),
-			_pk_translate('CoreHome_MonthOctober_js'),
-			_pk_translate('CoreHome_MonthNovember_js'),
-			_pk_translate('CoreHome_MonthDecember_js')]
-	}
+			_pk_translate('General_MonthJanuary_js'),
+			_pk_translate('General_MonthFebruary_js'),
+			_pk_translate('General_MonthMarch_js'),
+			_pk_translate('General_MonthApril_js'),
+			_pk_translate('General_MonthMay_js'),
+			_pk_translate('General_MonthJune_js'),
+			_pk_translate('General_MonthJuly_js'),
+			_pk_translate('General_MonthAugust_js'),
+			_pk_translate('General_MonthSeptember_js'),
+			_pk_translate('General_MonthOctober_js'),
+			_pk_translate('General_MonthNovember_js'),
+			_pk_translate('General_MonthDecember_js')]
+	};
+};
+
+var updateDate;
+function getDatePickerOptions()
+{
+	var result = piwik.getBaseDatePickerOptions(currentDate);
+	result.beforeShowDay = isDateInCurrentPeriod;
+	result.stepMonths = selectedPeriod == 'year' ? 12 : 1;
+	result.onSelect = function () { updateDate.apply(this, arguments); };
+	return result;
 };
 
 $(document).ready(function() {
@@ -373,20 +380,50 @@ $(document).ready(function() {
 		}
 	});
 	
+	// Hack to get around firefox bug. When double clicking a label in firefox, the 'click'
+	// event of its associated input will not be fired twice. We want to change the period
+	// if clicking the select period's label OR input, so we catch the click event on the
+	// label & the input.
+	var reloading = false;
+	var changePeriodOnClick = function(periodInput)
+	{
+		if (reloading) // if a click event resulted in reloading, don't reload again
+		{
+			return;
+		}
+		
+		var url = periodInput.val(),
+			period = broadcast.getValueFromUrl('period', url);
+		
+	    // if clicking on the selected period, change the period but not the date
+	    if (selectedPeriod == period && selectedPeriod != 'range')
+	    {
+	    	// only reload if current period is different from selected
+	    	if (piwik.period != selectedPeriod && !reloading)
+	    	{
+	    		reloading = true;
+	    		selectedPeriod = period;
+	    		updateDate(piwik.currentDateString);
+	    	}
+	    	return true;
+	    }
+	    
+	    return false;
+	};
+	
+	$("#otherPeriods label").on('click', function(e) {
+		var id = $(e.target).attr('for');
+		changePeriodOnClick($('#' + id));
+	});
+	
 	// when non-range period is clicked, change the period & refresh the date picker
 	$("#otherPeriods input").on('click', function(e) {
 	    var request_URL = $(e.target).val(),
 	    	period = broadcast.getValueFromUrl('period', request_URL),
 	    	lastPeriod = selectedPeriod;
 	    
-	    // if clicking on the selected period, change the period but not the date
-	    if (selectedPeriod == period)
+	    if (changePeriodOnClick($(e.target)))
 	    {
-	    	if (piwik.period != selectedPeriod) // only reload if current period is different from selected
-	    	{
-	    		selectedPeriod = period;
-	    		updateDate(piwik.currentDateString);
-	    	}
 	    	return true;
 	    }
 	    

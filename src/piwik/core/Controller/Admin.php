@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Admin.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -27,12 +26,41 @@ abstract class Piwik_Controller_Admin extends Piwik_Controller
 	{
 		parent::setBasicVariablesView($view);
 
+		self::setBasicVariablesAdminView($view);
+	}
+
+	static public function setBasicVariablesAdminView($view)
+	{
+		$statsEnabled = Piwik_Config::getInstance()->Tracker['record_statistics'];
+		if($statsEnabled == "0"){
+			$view->statisticsNotRecorded = true;
+		}
+
+		$view->topMenu = Piwik_GetTopMenu();
 		$view->currentAdminMenuName = Piwik_GetCurrentAdminMenuName();
 
 		$view->enableFrames = Piwik_Config::getInstance()->General['enable_framed_settings'];
-		if(!$view->enableFrames)
-		{
+		if (!$view->enableFrames) {
 			$view->setXFrameOptions('sameorigin');
+		}
+		
+		$view->isSuperUser = Piwik::isUserIsSuperUser();
+		
+		// for old geoip plugin warning
+		$view->usingOldGeoIPPlugin = Piwik_PluginsManager::getInstance()->isPluginActivated('GeoIP');
+		
+		// for cannot find installed plugin warning
+		$missingPlugins = Piwik_PluginsManager::getInstance()->getMissingPlugins();
+		if (!empty($missingPlugins))
+		{
+			$pluginsLink = Piwik_Url::getCurrentQueryStringWithParametersModified(array(
+				'module' => 'CorePluginsAdmin', 'action' => 'index'
+			));
+			$view->missingPluginsWarning = Piwik_Translate('CoreAdminHome_MissingPluginsWarning', array(
+				'<strong>'.implode('</strong>,&nbsp;<strong>', $missingPlugins).'</strong>',
+				'<a href="'.$pluginsLink.'"/>',
+				'</a>'
+			));
 		}
 	}
 }

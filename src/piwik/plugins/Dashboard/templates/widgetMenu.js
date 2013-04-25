@@ -11,24 +11,23 @@ function widgetsHelper()
 
 /**
  * Returns the available widgets fetched via AJAX (if not already done)
- * 
+ *
  * @return {object} object containing available widgets
  */
 widgetsHelper.getAvailableWidgets = function ()
 {
     if(!widgetsHelper.availableWidgets) {
-        var ajaxRequest =
-        {
-            type: 'GET',
-            url: 'index.php?module=Dashboard&action=getAvailableWidgets&token_auth='+piwik.token_auth+'&idSite='+piwik.idSite,
-            dataType: 'json',
-            async: false,
-            error: piwikHelper.ajaxHandleError,
-            success: function(data){ 
+        var ajaxRequest = new ajaxHelper();
+        ajaxRequest.addParams({
+            module: 'Dashboard',
+            action: 'getAvailableWidgets'
+        }, 'get');
+        ajaxRequest.setCallback(
+            function (data) {
                 widgetsHelper.availableWidgets = data;
             }
-        };
-        $.ajax(ajaxRequest);
+        );
+        ajaxRequest.send(true);
     }
     
     return widgetsHelper.availableWidgets;
@@ -76,16 +75,21 @@ widgetsHelper.getWidgetNameFromUniqueId = function (uniqueId)
  * @param {object} widgetParameters           parameters to be used for loading the widget
  * @param {function} onWidgetLoadedCallback   callback to be executed after widget is loaded
  * @return {object}
+ * @deprecated  since 1.9.3 - will be removed in next major release. use widgetsHelper.loadWidgetAjax
  */
 widgetsHelper.getLoadWidgetAjaxRequest = function (widgetUniqueId, widgetParameters, onWidgetLoadedCallback)
 {
-
     var token_auth = broadcast.getValueFromUrl('token_auth');
     if(token_auth.length && token_auth != 'anonymous')
     {
     	widgetParameters['token_auth'] = token_auth;
     }
-    
+    var disableLink = broadcast.getValueFromUrl('disableLink');
+    if(disableLink.length)
+    {
+    	widgetParameters['disableLink'] = disableLink;
+    }
+
 	return {
 		widgetUniqueId:widgetUniqueId,
 		type: 'GET',
@@ -94,8 +98,34 @@ widgetsHelper.getLoadWidgetAjaxRequest = function (widgetUniqueId, widgetParamet
 		async: true,
 		error: piwikHelper.ajaxHandleError,
 		success: onWidgetLoadedCallback,
-		data: piwikHelper.getQueryStringFromParameters(widgetParameters) + "&widget=1&idSite="+piwik.idSite+"&period="+piwik.period+"&date="+broadcast.getValueFromUrl('date') + "&token_auth=" + piwik.token_auth  
+		data: piwikHelper.getQueryStringFromParameters(widgetParameters) + "&widget=1&idSite="+piwik.idSite+"&period="+piwik.period+"&date="+broadcast.getValueFromUrl('date') + "&token_auth=" + piwik.token_auth
 	};
+};
+
+/**
+ * Sends and ajax request to query for the widgets html
+ *
+ * @param {string} widgetUniqueId             unique id of the widget
+ * @param {object} widgetParameters           parameters to be used for loading the widget
+ * @param {function} onWidgetLoadedCallback   callback to be executed after widget is loaded
+ * @return {object}
+ */
+widgetsHelper.loadWidgetAjax = function (widgetUniqueId, widgetParameters, onWidgetLoadedCallback)
+{
+    var disableLink = broadcast.getValueFromUrl('disableLink');
+    if(disableLink.length)
+    {
+    	widgetParameters['disableLink'] = disableLink;
+    }
+
+    widgetParameters['widget'] = 1;
+
+    var ajaxRequest = new ajaxHelper();
+    ajaxRequest.addParams(widgetParameters, 'get');
+    ajaxRequest.setCallback(onWidgetLoadedCallback);
+    ajaxRequest.setFormat('html');
+    ajaxRequest.send(false);
+    return ajaxRequest;
 };
 
 /**
@@ -231,17 +261,18 @@ widgetsHelper.getEmptyWidgetHtml = function (uniqueId, widgetName)
                 
                 return $('.'+settings.widgetlistClass, widgetPreview);
             };
-            
+
             /**
              * Display the given widgets in a widget list
-             * 
+             *
              * @param {object} widgets widgets to be displayed
              * @return {void}
              */
             function showWidgetList(widgets) {
-                
-                var widgetList   = createWidgetList();
-                
+
+                var widgetList   = createWidgetList(),
+                    widgetPreviewTimer;
+
                 for(var j in widgets) {
                     var widgetName       = widgets[j]["name"];
                     var widgetUniqueId   = widgets[j]["uniqueId"];
@@ -250,19 +281,28 @@ widgetsHelper.getEmptyWidgetHtml = function (uniqueId, widgetName)
                     if(!settings.isWidgetAvailable(widgetUniqueId)) {
                         widgetClass += ' ' + settings.unavailableClass;
                     }
-                    
+
                     widgetList.append('<li class="'+ widgetClass +'" uniqueid="'+ widgetUniqueId +'">'+ widgetName +'</li>');
                 }
-                
-                $('li:not(.'+settings.unavailableClass+')', widgetList).on('mouseover', function(){
-                    var widgetUniqueId = $(this).attr('uniqueid');
-                    
-                    $('li', widgetList).removeClass(settings.choosenClass);
-                    $(this).addClass(settings.choosenClass);
-                    
-                    showPreview(widgetUniqueId);
+
+                // delay widget preview a few millisconds
+                $('li:not(.'+settings.unavailableClass+')', widgetList).on('mouseenter', function(){
+                    var that = this,
+                        widgetUniqueId = $(this).attr('uniqueid');
+                    clearTimeout(widgetPreview);
+                    widgetPreviewTimer = setTimeout(function() {
+                        $('li', widgetList).removeClass(settings.choosenClass);
+                        $(that).addClass(settings.choosenClass);
+
+                        showPreview(widgetUniqueId);
+                    }, 400);
                 });
-                
+
+                // clear timeout after mouse has left
+                $('li:not(.'+settings.unavailableClass+')', widgetList).on('mouseleave', function(){
+                    clearTimeout(widgetPreview);
+                });
+
                 $('li:not(.'+settings.unavailableClass+')', widgetList).on('click', function(){
                     if(!$('.widgetLoading', widgetPreview).length) {
                         settings.onSelect($(this).attr('uniqueid'));
@@ -272,13 +312,13 @@ widgetsHelper.getEmptyWidgetHtml = function (uniqueId, widgetName)
                     }
                     return false;
                 });
-            };
-            
+            }
+
             /**
              * Returns the div to show widget preview in
              * - if element doesn't exist it will be created and added
              * - if element already exist it's content will be removed
-             * 
+             *
              * @return {$} preview element
              */
             function createPreviewElement() {
@@ -300,7 +340,6 @@ widgetsHelper.getEmptyWidgetHtml = function (uniqueId, widgetName)
              * @return {void}
              */
             function showPreview(widgetUniqueId) {
-                
                 // do not reload id widget already displayed
                 if($('#'+widgetUniqueId, widgetPreview).length) return; 
                 
@@ -320,6 +359,7 @@ widgetsHelper.getEmptyWidgetHtml = function (uniqueId, widgetName)
                 var onWidgetLoadedCallback = function (response) {
                     var widgetElement = $('#'+widgetUniqueId);
                     $('.widgetContent', widgetElement).html($(response));
+                    $('.widgetContent', widgetElement).trigger('widget:create');
                     settings.onPreviewLoaded(widgetUniqueId, widgetElement);
                     $('.'+settings.widgetpreviewClass+' .widgetTop', widgetPreview).on('click', function(){
                         settings.onSelect(widgetUniqueId);
@@ -335,8 +375,7 @@ widgetsHelper.getEmptyWidgetHtml = function (uniqueId, widgetName)
                     widgetAjaxRequest.abort();
                 }
                 
-                var ajaxRequest = widgetsHelper.getLoadWidgetAjaxRequest(widgetUniqueId, widgetParameters, onWidgetLoadedCallback);
-                widgetAjaxRequest = $.ajax(ajaxRequest);
+                widgetAjaxRequest = widgetsHelper.loadWidgetAjax(widgetUniqueId, widgetParameters, onWidgetLoadedCallback);
             };
             
             /**

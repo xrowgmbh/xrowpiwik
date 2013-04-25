@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6117 2012-03-26 11:00:54Z EZdesign $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -46,6 +45,9 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	{
 		$controllerName = Piwik_Common::getRequestVar('moduleToLoad');
 		$actionName = Piwik_Common::getRequestVar('actionToLoad', 'index');
+		if($actionName == 'showInContext') {
+			throw new Exception("Preventing infinite recursion...");
+		}
 		$view = $this->getDefaultIndexView();
 		$view->content = Piwik_FrontController::getInstance()->fetchDispatch( $controllerName, $actionName );
 		echo $view->render();	
@@ -135,7 +137,7 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	/** Render the entire row evolution popover for a single row */
 	public function getRowEvolutionPopover()
 	{
-		$rowEvolution = new Piwik_CoreHome_DataTableRowAction_RowEvolution($this->idSite, $this->date);
+		$rowEvolution = $this->makeRowEvolution($isMulti = false);
 		self::$rowEvolutionCache = $rowEvolution;
 		$view = Piwik_View::factory('popover_rowevolution');
 		echo $rowEvolution->renderPopover($this, $view);
@@ -144,7 +146,7 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	/** Render the entire row evolution popover for multiple rows */
 	public function getMultiRowEvolutionPopover()
 	{
-		$rowEvolution = new Piwik_CoreHome_DataTableRowAction_MultiRowEvolution($this->idSite, $this->date);
+		$rowEvolution = $this->makeRowEvolution($isMulti = true);
 		self::$rowEvolutionCache = $rowEvolution;
 		$view = Piwik_View::factory('popover_multirowevolution');
 		echo $rowEvolution->renderPopover($this, $view);
@@ -154,8 +156,74 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	public function getRowEvolutionGraph($fetch = false)
 	{
 		$rowEvolution = self::$rowEvolutionCache;
+		if ($rowEvolution === null)
+		{
+			$paramName = Piwik_CoreHome_DataTableRowAction_MultiRowEvolution::IS_MULTI_EVOLUTION_PARAM;
+			$isMultiRowEvolution = Piwik_Common::getRequestVar($paramName, false, 'int');
+			
+			$rowEvolution = $this->makeRowEvolution($isMultiRowEvolution, $graphType = 'graphEvolution');
+			$rowEvolution->useAvailableMetrics();
+			self::$rowEvolutionCache = $rowEvolution;
+		}
+		
 		$view = $rowEvolution->getRowEvolutionGraph();
 		return $this->renderView($view, $fetch);
 	}
 	
+	/** Utility function. Creates a RowEvolution instance. */
+	private function makeRowEvolution( $isMultiRowEvolution, $graphType = null )
+	{
+		if ($isMultiRowEvolution)
+		{
+			return new Piwik_CoreHome_DataTableRowAction_MultiRowEvolution($this->idSite, $this->date, $graphType);
+		}
+		else
+		{
+			return new Piwik_CoreHome_DataTableRowAction_RowEvolution($this->idSite, $this->date, $graphType);
+		}
+	}
+	
+	/**
+	 * Forces a check for updates and re-renders the header message.
+	 * 
+	 * This will check piwik.org at most once per 10s.
+	 */
+	public function checkForUpdates()
+	{
+		Piwik::checkUserHasSomeAdminAccess();
+		$this->checkTokenInUrl();
+		
+		// perform check (but only once every 10s)
+		Piwik_UpdateCheck::check($force = false, Piwik_UpdateCheck::UI_CLICK_CHECK_INTERVAL);
+		
+		$view = Piwik_View::factory('header_message');
+		$this->setGeneralVariablesView($view);
+		echo $view->render();
+	}
+	
+	/**
+	 * Renders and echo's the in-app donate form w/ slider.
+	 */
+	public function getDonateForm()
+	{
+		$view = Piwik_View::factory('donate');
+		if (Piwik_Common::getRequestVar('widget', false)
+			&& Piwik::isUserIsSuperUser())
+		{
+			$view->footerMessage = Piwik_Translate('CoreHome_OnlyForAdmin');
+		}
+		echo $view->render();
+	}
+	
+	/**
+	 * Renders and echo's HTML that displays the Piwik promo video.
+	 */
+	public function getPromoVideo()
+	{
+		$view = Piwik_View::factory('promo_video');
+		$view->shareText = Piwik_Translate('CoreHome_SharePiwikShort');
+		$view->shareTextLong = Piwik_Translate('CoreHome_SharePiwikLong');
+		$view->promoVideoUrl = 'http://www.youtube.com/watch?v=OslfF_EH81g';
+		echo $view->render();
+	}
 }

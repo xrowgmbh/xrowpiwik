@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6727 2012-08-13 20:26:46Z JulienM $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports
@@ -77,6 +76,7 @@ class Piwik_PDFReports_Controller extends Piwik_Controller
 		unset($periods['range']);
 		$view->periods = $periods;
 		$view->defaultPeriod = Piwik_PDFReports::DEFAULT_PERIOD;
+		$view->defaultHour = Piwik_PDFReports::DEFAULT_HOUR;
 
 		$view->language = Piwik_LanguagesManager::getLanguageCodeForCurrentUser();
 

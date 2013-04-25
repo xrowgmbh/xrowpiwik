@@ -6,9 +6,9 @@
 }
 
 #content.admin {
-	margin:0 15px;
-	padding:0 0 0 0;
-	font:13px Arial, Helvetica, sans-serif
+	margin:0 15px 0 270px;
+    padding: 0 0 40px;
+	font:13px Arial, Helvetica, sans-serif;
 }
 
 .admin #header_message{
@@ -143,3 +143,22 @@ table.admin  tbody td:hover, table.admin  tbody th:hover {
 .admin .sites_autocomplete a {
 	color: #255792;
 }
+
+/* trusted host styles */
+#trustedHostSettings .adminTable {
+	width:300px;
+}
+#trustedHostSettings .adminTable td {
+	vertical-align: middle;
+	padding-bottom: 0;
+}
+#trustedHostSettings .adminTable tr td:last-child {
+	padding: 0 0 0 0;
+}
+#trustedHostSettings input {
+	width:238px;
+}
+#trustedHostSettings .add-trusted-host-container {
+	padding: 12px 24px;
+}
+

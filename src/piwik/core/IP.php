@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: IP.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -48,6 +47,8 @@ if(Piwik_Common::isWindows() || !function_exists('inet_pton')) {
  */
 class Piwik_IP
 {
+	const MAPPED_IPv4_START = '::ffff:';
+	
 	/**
 	 * Sanitize human-readable IP address.
 	 *
@@ -253,6 +254,37 @@ class Piwik_IP
 		}
 
 		return '0.0.0.0';
+	}
+	
+	/**
+	 * Returns true if $ip is an IPv6 address, false if otherwise. This function does
+	 * a naive check. It assumes that whatever format $ip is in, it is well-formed.
+	 * 
+	 * @param string $ip
+	 * @return bool
+	 */
+	static public function isIPv6( $ip )
+	{
+		return strpos($ip, ':') !== false;
+	}
+	
+	/**
+	 * Returns true if $ip is a IPv4 mapped address, false if otherwise.
+	 * 
+	 * @param string $ip
+	 * @return bool
+	 */
+	static public function isMappedIPv4($ip)
+	{
+		return substr($ip, 0, strlen(self::MAPPED_IPv4_START)) === self::MAPPED_IPv4_START;
+	}
+	
+	/**
+	 * Returns
+	 */
+	static public function getIPv4FromMappedIPv6($ip)
+	{
+		return substr($ip, strlen(self::MAPPED_IPv4_START));
 	}
 
 	/**

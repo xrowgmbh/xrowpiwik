@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Range.php 6678 2012-08-05 21:07:18Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -130,11 +129,11 @@ class Piwik_Period_Range extends Piwik_Period
 			break;
 			
 			case 'week':
-				$lastN = min( $lastN, 5*52 );
+				$lastN = min( $lastN, 10*52 );
 			break;
 			
 			case 'month':
-				$lastN = min( $lastN, 5*12 );
+				$lastN = min( $lastN, 10*12 );
 			break;
 			
 			case 'year':
@@ -195,11 +194,11 @@ class Piwik_Period_Range extends Piwik_Period
 				$endDate = self::removePeriod($period, $defaultEndDate, 1);
 			}		
 			
+			$lastN = $this->getMaxN($lastN);
+			
 			// last1 means only one result ; last2 means 2 results so we remove only 1 to the days/weeks/etc
 			$lastN--;
 			$lastN = abs($lastN);
-			
-			$lastN = $this->getMaxN($lastN);
 			
 			$startDate = self::removePeriod($period, $endDate, $lastN);
 		}
@@ -357,6 +356,9 @@ class Piwik_Period_Range extends Piwik_Period
 		$arrayPeriods= array();
 		$endSubperiod = Piwik_Period::factory($period, $endDate);
 		$arrayPeriods[] = $endSubperiod;
+		
+		// set end date to start of end period since we're comparing against start date.
+		$endDate = $endSubperiod->getDateStart();
 		while($endDate->isLater($startDate) )
 		{
 			$endDate = self::removePeriod($period, $endDate, 1);
@@ -368,5 +370,49 @@ class Piwik_Period_Range extends Piwik_Period
 		{
 			$this->addSubperiod($period);
 		}
+	}
+	
+	/**
+	 * Returns the date that is one period before the supplied date.
+	 * 
+	 * @param string $date The date to get the last date of.
+	 * @param string $period The period to use (either 'day', 'week', 'month', 'year');
+	 * @return array An array with two elements, a string for the date before $date and
+	 *               a Piwik_Period instance for the period before $date.
+	 */
+	public static function getLastDate( $date = false, $period = false )
+	{
+		if ($date === false)
+		{
+			$date = Piwik_Common::getRequestVar('date');
+		}
+		
+		if ($period === false)
+		{
+			$period = Piwik_Common::getRequestVar('period');
+		}
+		
+		// can't get the last date for range periods & dates that use lastN/previousN
+		$strLastDate = false;
+		$lastPeriod = false;
+		if ($period != 'range' && !preg_match('/(last|previous)([0-9]*)/', $date, $regs))
+		{
+			if (strpos($date, ',')) // date in the form of 2011-01-01,2011-02-02
+			{
+				$rangePeriod = new Piwik_Period_Range($period, $date);
+
+				$lastStartDate = Piwik_Period_Range::removePeriod($period, $rangePeriod->getDateStart(), $n = 1);
+				$lastEndDate = Piwik_Period_Range::removePeriod($period, $rangePeriod->getDateEnd(), $n = 1);
+
+				$strLastDate = "$lastStartDate,$lastEndDate";
+			}
+			else
+			{
+				$lastPeriod = Piwik_Period_Range::removePeriod($period, Piwik_Date::factory($date), $n = 1);
+				$strLastDate = $lastPeriod->toString();
+			}
+		}
+		
+		return array($strLastDate, $lastPeriod);
 	}
 }

@@ -61,7 +61,7 @@ function initDashboard(dashboardId, dashboardLayout) {
     });
 
     $('#columnPreview>div').each(function(){
-        var width = new Array();
+        var width = [];
         $('div', this).each(function(){
             width.push(this.className.replace(/width-/, ''));
         });
@@ -86,25 +86,23 @@ function createDashboard() {
     piwikHelper.modalConfirm('#createDashboardConfirm', {yes: function(){
         var dashboardName = $('#createDashboardName').attr('value');
         var type = ($('#dashboard_type_empty:checked').length > 0) ? 'empty' : 'default';
-        piwikHelper.showAjaxLoading();
-        var ajaxRequest =
-        {
-            type: 'GET',
-            url: 'index.php?module=Dashboard&action=createNewDashboard',
-            dataType: 'json',
-            async: true,
-            error: piwikHelper.ajaxHandleError,
-            success: function(id) {
+
+        var ajaxRequest = new ajaxHelper();
+        ajaxRequest.setLoadingElement();
+        ajaxRequest.addParams({
+            module: 'Dashboard',
+            action: 'createNewDashboard'
+        }, 'get');
+        ajaxRequest.addParams({
+            name: encodeURIComponent(dashboardName),
+            type: type
+        }, 'post');
+        ajaxRequest.setCallback(
+            function (id) {
                 $('#dashboardWidgetsArea').dashboard('loadDashboard', id);
-            },
-            data: {
-                token_auth: piwik.token_auth,
-                idSite: piwik.idSite,
-                name: encodeURIComponent(dashboardName),
-                type: type
             }
-        };
-        $.ajax(ajaxRequest);
+        );
+        ajaxRequest.send(true);
     }});
 }
 
@@ -140,5 +138,56 @@ function showEmptyDashboardNotification() {
 function setAsDefaultWidgets() {
     piwikHelper.modalConfirm('#setAsDefaultWidgetsConfirm', {
         yes: function(){ $('#dashboardWidgetsArea').dashboard('saveLayoutAsDefaultWidgetLayout'); }
+    });
+}
+
+function copyDashboardToUser() {
+    $('#copyDashboardName').attr('value', $('#dashboardWidgetsArea').dashboard('getDashboardName'));
+    var ajaxRequest = new ajaxHelper();
+    ajaxRequest.addParams({
+        module:      'API',
+        method:      'UsersManager.getUsers',
+        format:      'json'
+    }, 'get');
+    ajaxRequest.setCallback(
+        function (availableUsers) {
+            $('#copyDashboardUser').empty();
+            $('#copyDashboardUser').append(
+                $('<option></option>').val(piwik.userLogin).html(piwik.userLogin)
+            );
+            $.each(availableUsers, function(index, user) {
+                if (user.login != 'anonymous' && user.login != piwik.userLogin) {
+                    $('#copyDashboardUser').append(
+                        $('<option></option>').val(user.login).html(user.login + ' ('+user.alias+')')
+                    );
+                }
+            });
+        }
+    );
+    ajaxRequest.send(true);
+
+    piwikHelper.modalConfirm('#copyDashboardToUserConfirm', {
+        yes: function() {
+            var copyDashboardName = $('#copyDashboardName').attr('value');
+            var copyDashboardUser = $('#copyDashboardUser').attr('value');
+
+            var ajaxRequest = new ajaxHelper();
+            ajaxRequest.addParams({
+                module: 'Dashboard',
+                action: 'copyDashboardToUser'
+            }, 'get');
+            ajaxRequest.addParams({
+                name: encodeURIComponent(copyDashboardName),
+                dashboardId: $('#dashboardWidgetsArea').dashboard('getDashboardId'),
+                user: encodeURIComponent(copyDashboardUser)
+            }, 'post');
+            ajaxRequest.setCallback(
+                function (id) {
+                    $('#alert h2').text(_pk_translate('Dashboard_DashboardCopied_js'));
+                    piwikHelper.modalConfirm('#alert', {});
+                }
+            );
+            ajaxRequest.send(true);
+        }
     });
 }

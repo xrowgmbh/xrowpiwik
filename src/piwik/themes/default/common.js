@@ -12,6 +12,35 @@ var piwikHelper = {
         return $('<div/>').html(value).text();
     },
 
+    /*
+     * a nice cross-browser logging function
+     */
+    log: function() {
+        try {
+            console.log.apply(console, arguments); // Firefox, Chrome
+        } catch (e) {
+            try {
+                opera.postError.apply(opera, arguments);  // Opera
+            } catch (f) {
+                // don't alert as log is not considered to be important enough
+                // (as opposed to piwikHelper.error)
+                //alert(Array.prototype.join.call(arguments, ' ')); // MSIE
+            }
+        }
+    },
+
+    error: function() {
+        try {
+            console.error.apply(console, arguments); // Firefox, Chrome
+        } catch (e) {
+            try {
+                opera.postError.apply(opera, arguments);  // Opera
+            } catch (f) {
+                alert(Array.prototype.join.call(arguments, ' ')); // MSIE
+            }
+        }
+    },
+
     htmlEntities: function(value)
     {
         var findReplace = [[/&/g, "&amp;"], [/</g, "&lt;"], [/>/g, "&gt;"], [/"/g, "&quot;"]];
@@ -20,6 +49,32 @@ var piwikHelper = {
         }
         return value;
     },
+	
+	/**
+	 * Add break points to a string so that it can be displayed more compactly
+	 */
+	addBreakpoints: function(text, breakpointMarkup)
+	{
+		return text.replace(/([\/&=?\.%#:])/g, '$1' +
+			(typeof breakpointMarkup == 'undefined' ? '<wbr>' : breakpointMarkup));
+	},
+
+	/**
+	 * Add breakpoints to a URL
+	 * urldecodes and encodes htmlentities to display utf8 urls without XSS vulnerabilities
+	 */
+	addBreakpointsToUrl: function(url)
+	{
+		try {
+			url = decodeURIComponent(url);
+		} catch (e) {
+			// might throw "URI malformed"
+		}
+		url = piwikHelper.addBreakpoints(url, '|||');
+		url = $(document.createElement('p')).text(url).html();
+		url = url.replace(/\|\|\|/g, '<wbr />');
+		return url;
+	},
 
     /**
      * Displays a Modal dialog. Text will be taken from the DOM node domSelector.
@@ -58,41 +113,6 @@ var piwikHelper = {
     },
 
     /**
-     * Array holding all running ajax requests
-     * @type {Array}
-     */
-    globalAjaxQueue: [],
-
-    /**
-     * Registers the given requests to the list of running requests
-     * @param {XMLHttpRequest} request  Request to be registered
-     * @return {void}
-     */
-    queueAjaxRequest: function( request )
-    {
-        this.globalAjaxQueue.push(request);
-        // clean up finished requests
-        for(var i = this.globalAjaxQueue.length; i--; ) {
-            if(!this.globalAjaxQueue[i] || this.globalAjaxQueue[i].readyState == 4) {
-                this.globalAjaxQueue.splice(i, 1);
-            }
-        }
-    },
-
-    /**
-     * Aborts all registered running ajax requests
-     * @return {Boolean}
-     */
-    abortQueueAjax: function()
-    {
-        for(var request in this.globalAjaxQueue) {
-            this.globalAjaxQueue[request].abort();
-        }
-        this.globalAjaxQueue = [];
-        return true;
-    },
-
-    /**
      * Returns the current query string with the given parameters modified
      * @param {object} newparams parameters to be modified
      * @return {String}
@@ -117,6 +137,26 @@ var piwikHelper = {
             }
         }
         return String(window.location.pathname) + parameters;
+    },
+
+  /**
+   * Given param1=v1&param2=k2
+   * returns: { "param1": "v1", "param2": "v2" }
+   *
+   * @param query string
+   * @return {Object}
+   */
+    getArrayFromQueryString: function (query) {
+      var params = {};
+      var vars = query.split("&");
+      for (var i=0;i<vars.length;i++) {
+        var keyValue = vars[i].split("=");
+        // Jquery will urlencode these, but we wish to keep the current raw value
+        // use case: &segment=visitorId%3D%3Dabc...
+        var rawValue = decodeURIComponent(keyValue[1]);
+        params[keyValue[0]] = rawValue;
+      }
+      return params;
     },
 
     /**
@@ -199,6 +239,8 @@ var piwikHelper = {
      * @param {string} errorDivID     id of domNode used for error messages
      * @param {object} params         params used for handling response
      * @return {object}
+     * @deprecated sine 1.9.3 - will be removed in 2.0
+     * @see use ajaxHelper for ajax requests
      */
     getStandardAjaxConf: function(loadingDivID, errorDivID, params)
     {
@@ -241,6 +283,8 @@ var piwikHelper = {
      * @param {XMLHttpRequest} deferred
      * @param {string} status
      * @return {void}
+     * @deprecated sine 1.9.3 - will be removed in 2.0
+     * @see use ajaxHelper for ajax requests
      */
     ajaxHandleError: function(deferred, status)
     {
@@ -256,11 +300,13 @@ var piwikHelper = {
 
     /**
      * Method to handle ajax response
-     * @param {} response
+     * @param {object} response
      * @param {string} loadingDivID
      * @param {string} errorDivID
      * @param {object} params
      * @return {void}
+     * @deprecated since 1.9.3 - will be removed in 2.0
+     * @see use ajaxHelper for ajax requests
      */
     ajaxHandleResponse: function(response, loadingDivID, errorDivID, params)
     {

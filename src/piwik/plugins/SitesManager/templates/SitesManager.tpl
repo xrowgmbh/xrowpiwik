@@ -1,5 +1,3 @@
-{assign var=showSitesSelection value=false}
-{assign var=showPeriodSelection value=false}
 {include file="CoreAdminHome/templates/header.tpl"}
 {loadJavascriptTranslations plugins='SitesManager'}
 
@@ -37,16 +35,50 @@ var aliasUrlsHelp = '{'SitesManager_AliasUrlHelp'|translate|inlineHelp|escape:ja
 	{'SitesManager_PiwikWillAutomaticallyExcludeCommonSessionParameters'|translate:"phpsessid, sessionid, ..."}
 {/capture}
 {assign var=excludedQueryParametersHelp value=$excludedQueryParametersHelp|inlineHelp}
+
+{capture assign=excludedUserAgentsHelp}
+	{'SitesManager_GlobalExcludedUserAgentHelp1'|translate}
+	<br/><br/>
+	{'SitesManager_GlobalListExcludedUserAgents_Desc'|translate} {'SitesManager_GlobalExcludedUserAgentHelp2'|translate}
+{/capture}
+{assign var=excludedUserAgentsHelp value=$excludedUserAgentsHelp|inlineHelp}
+
+{capture assign=keepURLFragmentSelectHTML}
+	<h4 style="display:inline-block;">{'SitesManager_KeepURLFragmentsLong'|translate}</h4>
+
+	<select id="keepURLFragmentSelect">
+		<option value="0">{if $globalKeepURLFragments}{'General_Yes'|translate}{else}{'General_No'|translate}{/if} ({'General_Default'|translate})</option>
+		<option value="1">{'General_Yes'|translate}</option>
+		<option value="2">{'General_No'|translate}</option>
+	</select>
+{/capture}
 var excludedQueryParametersHelp = '{$excludedQueryParametersHelp|escape:javascript}';
+var excludedUserAgentsHelp = '{$excludedUserAgentsHelp|escape:javascript}';
 var timezoneHelp = '{$timezoneHelpPlain|inlineHelp|escape:javascript}';
 var currencyHelp = '{$currencyHelpPlain|escape:javascript}';
 var ecommerceHelp = '{$ecommerceHelpPlain|inlineHelp|escape:javascript}';
 var ecommerceEnabled = '{'SitesManager_EnableEcommerce'|translate|escape:javascript}';
 var ecommerceDisabled = '{'SitesManager_NotAnEcommerceSite'|translate|escape:javascript}';
-{assign var=defaultTimezoneHelp value=$defaultTimezoneHelpPlain|inlineHelp};
+{assign var=defaultTimezoneHelp value=$defaultTimezoneHelpPlain|inlineHelp}
+{assign var=searchKeywordHelp value='SitesManager_SearchKeywordParametersDesc'|translate|inlineHelp}
+{capture assign=searchCategoryHelpText}{'Goals_Optional'|translate} {'SitesManager_SearchCategoryParametersDesc'|translate}{/capture}
+{assign var=searchCategoryHelp value=$searchCategoryHelpText|inlineHelp}
+var sitesearchEnabled = '{'SitesManager_EnableSiteSearch'|translate|escape:javascript}';
+var sitesearchDisabled = '{'SitesManager_DisableSiteSearch'|translate|escape:javascript}';
+var searchKeywordHelp = '{$searchKeywordHelp|escape:javascript}';
+var searchCategoryHelp = '{$searchCategoryHelp|escape:javascript}';
+var sitesearchDesc = '{'SitesManager_TrackingSiteSearch'|translate|escape:javascript}';
+var keepURLFragmentSelectHTML = '{$keepURLFragmentSelectHTML|escape:javascript}';
 
 var sitesManager = new SitesManager ( {$timezones}, {$currencies}, '{$defaultTimezone}', '{$defaultCurrency}');
-
+{assign var=searchKeywordLabel value='SitesManager_SearchKeywordLabel'|translate}
+{assign var=searchCategoryLabel value='SitesManager_SearchCategoryLabel'|translate}
+var searchKeywordLabel = '{$searchKeywordLabel|escape:javascript}';
+var searchCategoryLabel = '{$searchCategoryLabel|escape:javascript}';
+{assign var=sitesearchIntro value='SitesManager_SiteSearchUse'|translate}
+var sitesearchIntro = '{$sitesearchIntro|inlineHelp|escape:javascript}';
+var sitesearchUseDefault = '{if $isSuperUser}{'SitesManager_SearchUseDefault'|translate:'<a href="#globalSiteSearch">':'</a>'|escape:'javascript'}{else}{'SitesManager_SearchUseDefault'|translate:'':''|escape:'javascript'}{/if}';
+var strDefault = '{'General_Default'|translate:escape:'javascript'}';
 {literal}
 $(document).ready( function() {
 	sitesManager.init();
@@ -81,8 +113,16 @@ font-size:9pt;
 .admin thead th {
 vertical-align:middle;
 }
-.ecommerceInactive {
+.ecommerceInactive,.sitesearchInactive {
  color: #666666;
+}
+#searchSiteParameters {
+	display:none;
+}
+#editSites h4 {
+	font-size:.8em;
+	margin:1em 0 1em 0;
+	font-weight:bold;
 }
 </style>
 {/literal}
@@ -122,6 +162,8 @@ vertical-align:middle;
 			<th>{'SitesManager_Urls'|translate}</th>
 			<th>{'SitesManager_ExcludedIps'|translate}</th>
 			<th>{'SitesManager_ExcludedParameters'|translate|replace:" ":"<br />"}</th>
+			<th id='exclude-user-agent-header' {if !$allowSiteSpecificUserAgentExclude}style="display:none"{/if}>{'SitesManager_ExcludedUserAgents'|translate}</th>
+			<th>{'Actions_SubmenuSitesearch'|translate}</th>
 			<th>{'SitesManager_Timezone'|translate}</th>
 			<th>{'SitesManager_Currency'|translate}</th>
 			<th>{'Goals_Ecommerce'|translate}</th>
@@ -132,18 +174,20 @@ vertical-align:middle;
 		</thead>
 		<tbody>
 			{foreach from=$adminSites key=i item=site}
-			<tr id="row{$i}">
+			<tr id="row{$site.idsite}" data-keep-url-fragments="{$site.keep_url_fragment}">
 				<td id="idSite">{$site.idsite}</td>
 				<td id="siteName" class="editableSite">{$site.name}</td>
 				<td id="urls" class="editableSite">{foreach from=$site.alias_urls item=url}{$url|replace:"http://":""}<br />{/foreach}</td>       
 				<td id="excludedIps" class="editableSite">{foreach from=$site.excluded_ips item=ip}{$ip}<br />{/foreach}</td>       
-				<td id="excludedQueryParameters" class="editableSite">{foreach from=$site.excluded_parameters item=parameter}{$parameter}<br />{/foreach}</td>       
+				<td id="excludedQueryParameters" class="editableSite">{foreach from=$site.excluded_parameters item=parameter}{$parameter}<br />{/foreach}</td>
+				<td id="excludedUserAgents" class="editableSite" {if !$allowSiteSpecificUserAgentExclude}style="display:none"{/if}>{foreach from=$site.excluded_user_agents item=ua}{$ua}<br />{/foreach}</td>
+				<td id="sitesearch" class="editableSite">{if $site.sitesearch}<span class='sitesearchActive'>{'General_Yes'|translate}</span>{else}<span class='sitesearchInactive'>-</span>{/if}<span class='sskp' sitesearch_keyword_parameters="{$site.sitesearch_keyword_parameters|escape:'html'}" sitesearch_category_parameters="{$site.sitesearch_category_parameters|escape:'html'}" id="sitesearch_parameters"></span></td>
 				<td id="timezone" class="editableSite">{$site.timezone}</td>
 				<td id="currency" class="editableSite">{$site.currency}</td>
 				<td id="ecommerce" class="editableSite">{if $site.ecommerce}<span class='ecommerceActive'>{'General_Yes'|translate}</span>{else}<span class='ecommerceInactive'>-</span>{/if}</td>
-				<td><span id="row{$i}" class='editSite link_but'><img src='themes/default/images/ico_edit.png' title="{'General_Edit'|translate}" border="0"/> {'General_Edit'|translate}</span></td>
-				<td><span id="row{$i}" class="deleteSite link_but"><img src='themes/default/images/ico_delete.png' title="{'General_Delete'|translate}" border="0" /> {'General_Delete'|translate}</span></td>
-				<td><a href='{url action=displayJavascriptCode idSite=$site.idsite updated=false}'>{'SitesManager_ShowTrackingTag'|translate}</a></td>
+				<td><span id="row{$site.idsite}" class='editSite link_but'><img src='themes/default/images/ico_edit.png' title="{'General_Edit'|translate}" border="0"/> {'General_Edit'|translate}</span></td>
+				<td><span id="row{$site.idsite}" class="deleteSite link_but"><img src='themes/default/images/ico_delete.png' title="{'General_Delete'|translate}" border="0" /> {'General_Delete'|translate}</span></td>
+				<td><a href='{url module=CoreAdminHome action=trackingCodeGenerator idSite=$site.idsite updated=false}'>{'SitesManager_ShowTrackingTag'|translate}</a></td>
 			</tr>
 			{/foreach}
 		</tbody>
@@ -154,7 +198,14 @@ vertical-align:middle;
 	</div>
 {/if}
 
-{if $isSuperUser}	
+
+{* Admin users use these values for Site Search column, when editing websites *}
+{if !$isSuperUser}
+<input type="hidden" size="15" id="globalSearchKeywordParameters" value="{$globalSearchKeywordParameters|escape:'html'}"></input>
+<input type="hidden" size="15"  id="globalSearchCategoryParameters" value="{$globalSearchCategoryParameters|escape:'html'}"></input>
+{/if}
+
+{if $isSuperUser}
 <br />
 	<a name='globalSettings'></a>
 	<h2>{'SitesManager_GlobalWebsitesSettings'|translate}</h2>
@@ -169,20 +220,71 @@ vertical-align:middle;
 			<textarea cols="30" rows="3" id="globalExcludedIps">{$globalExcludedIps}
 </textarea>
 			</td><td>
-				{$excludedIpHelp}
+				<label for="globalExcludedIps">{$excludedIpHelp}</label>
 		</td></tr>
-		
+
 		<tr><td colspan="2">
-				<b>{'SitesManager_GlobalListExcludedQueryParameters'|translate}</b>
-				<p>{'SitesManager_ListOfQueryParametersToBeExcludedOnAllWebsites'|translate} </p>
-			</td></tr>
-			<tr><td>
+			<b>{'SitesManager_GlobalListExcludedQueryParameters'|translate}</b>
+			<p>{'SitesManager_ListOfQueryParametersToBeExcludedOnAllWebsites'|translate} </p>
+		</td></tr>
+
+		<tr><td>
 			<textarea cols="30" rows="3" id="globalExcludedQueryParameters">{$globalExcludedQueryParameters}
 </textarea>
-			</td><td>
-				{$excludedQueryParametersHelp}
+		</td><td><label for="globalExcludedQueryParameters">{$excludedQueryParametersHelp}</label>
 		</td></tr>
 		
+		{* global excluded user agents *}
+		<tr><td colspan="2">
+			<b>{'SitesManager_GlobalListExcludedUserAgents'|translate}</b>
+			<p>{'SitesManager_GlobalListExcludedUserAgents_Desc'|translate}</p>
+		</td></tr>
+		
+		<tr><td>
+			<textarea cols="30" rows="3" id="globalExcludedUserAgents">{$globalExcludedUserAgents}</textarea>
+		</td><td><label for="globalExcludedUserAgents">{$excludedUserAgentsHelp}</label>
+		</td></tr>
+		
+		<tr><td>
+			<input type="checkbox" id="enableSiteUserAgentExclude" name="enableSiteUserAgentExclude" {if $allowSiteSpecificUserAgentExclude}checked="checked"{/if}/><label for="enableSiteUserAgentExclude">{'SitesManager_EnableSiteSpecificUserAgentExclude'|translate}</label>
+			<span id='enableSiteUserAgentExclude-loading' class='loadingPiwik' style='display:none'><img src='./themes/default/images/loading-blue.gif' /></span>
+		</td><td>{'SitesManager_EnableSiteSpecificUserAgentExclude_Help'|translate:'<a href="#editSites">':'</a>'|inlineHelp}
+		</td></tr>
+		
+		{* global keep URL fragments *}
+		<tr><td colspan="2">
+			<strong>{'SitesManager_KeepURLFragments'|translate}</strong>
+			<p>{'SitesManager_KeepURLFragmentsHelp'|translate:"<em>#</em>":"<em>example.org/index.html#first_section</em>":"<em>example.org/index.html</em>"}
+			</p>
+			<input type="checkbox" id="globalKeepURLFragments" name="globalKeepURLFragments" {if $globalKeepURLFragments}checked="checked"{/if}/>
+			<label for="globalKeepURLFragments">{'SitesManager_KeepURLFragmentsLong'|translate}</label>
+			<p>{'SitesManager_KeepURLFragmentsHelp2'|translate}</p>
+		</td></tr>
+
+		{* global site search *}
+		<tr><td colspan="2">
+		<a name='globalSiteSearch'></a><b>{'SitesManager_TrackingSiteSearch'|translate}</b>
+		<p>{$sitesearchIntro}</p>
+			<span class="form-description" style='font-size:8pt'>{'SitesManager_SearchParametersNote'|translate} {'SitesManager_SearchParametersNote2'|translate}</span>
+		</td></tr>
+		<tr><td colspan="2">
+		<label>{$searchKeywordLabel} &nbsp;<input type="text" size="15" id="globalSearchKeywordParameters" value="{$globalSearchKeywordParameters|escape:'html'}"></input>
+				<div style='width: 200px;float:right;'>{$searchKeywordHelp}</div></label>
+		</td></tr>
+
+		<tr><td colspan="2">
+		{if !$isSearchCategoryTrackingEnabled}
+			<input value='globalSearchCategoryParametersIsDisabled'  id="globalSearchCategoryParameters" type='hidden'></input>
+			<span class='form-description'>Note: you could also track your Internal Search Engine Categories, but the plugin Custom Variables is required. Please enable the plugin CustomVariables (or ask your Piwik admin).</span>
+		{else}
+		{'Goals_Optional'|translate} {'SitesManager_SearchCategoryDesc'|translate} <br/>
+		</td></tr>
+		<tr><td colspan="2">
+		<label>{$searchCategoryLabel}  &nbsp;<input type="text" size="15"  id="globalSearchCategoryParameters" value="{$globalSearchCategoryParameters|escape:'html'}"></input>
+				<div style='width: 200px;float:right;'>{$searchCategoryHelp}</div></label>
+		{/if}
+		</td></tr>
+
 		<tr><td colspan="2">
 				<b>{'SitesManager_DefaultTimezoneForNewWebsites'|translate}</b>
 				<p>{'SitesManager_SelectDefaultTimezone'|translate} </p>

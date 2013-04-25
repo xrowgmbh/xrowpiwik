@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: RankingQuery.php 6980 2012-09-13 02:22:04Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -288,7 +287,7 @@ class Piwik_RankingQuery
 		{
 			$labelColumnsOthersSwitch[] = "
 				CASE
-					WHEN counter = $limit THEN \"{$this->othersLabelValue}\" 
+					WHEN counter = $limit THEN '".$this->othersLabelValue."'
 					ELSE `$column`
 				END AS `$column`
 			";
@@ -351,7 +350,6 @@ class Piwik_RankingQuery
 			FROM ( $withCounter ) AS withCounter
 			GROUP BY $groupBy
 		";
-		
 		return $groupOthers;
 	}
 	

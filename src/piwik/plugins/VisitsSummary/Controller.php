@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6076 2012-03-20 21:52:15Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitsSummary
@@ -33,7 +32,7 @@ class Piwik_VisitsSummary_Controller extends Piwik_Controller
 		echo $view->render();
 	}
 
-	public function getEvolutionGraph( $fetch = false, $columns = false )
+	public function getEvolutionGraph( $fetch = false, array $columns = array())
 	{
 		if(empty($columns))
 		{
@@ -73,7 +72,14 @@ class Piwik_VisitsSummary_Controller extends Piwik_Controller
 			'nb_outlinks',
 			'nb_uniq_outlinks'
 		);
-		
+
+		$idSite = Piwik_Common::getRequestVar('idSite');
+		$displaySiteSearch = Piwik_Site::isSiteSearchEnabledFor($idSite);
+
+		if($displaySiteSearch) {
+			$selectableColumns[] = 'nb_searches';
+			$selectableColumns[] = 'nb_keywords';
+		}
 		$view = $this->getLastUnitGraphAcrossPlugins($this->pluginName, __FUNCTION__, $columns, 
 							$selectableColumns, $documentation);
 		
@@ -88,7 +94,8 @@ class Piwik_VisitsSummary_Controller extends Piwik_Controller
 							// by a method that already calls the API with some generic filters applied
 							"&disable_generic_filters=1";
 		$request = new Piwik_API_Request($requestString);
-		return $request->process();
+		$result = $request->process();
+		return empty($result) ? new Piwik_DataTable() : $result;
 	}
 
 	static public function getVisits()
@@ -110,12 +117,21 @@ class Piwik_VisitsSummary_Controller extends Piwik_Controller
 		$view->urlSparklineMaxActions 		= $this->getUrlSparkline( 'getEvolutionGraph', array('columns' => array('max_actions')));
 		$view->urlSparklineActionsPerVisit 	= $this->getUrlSparkline( 'getEvolutionGraph', array('columns' => array('nb_actions_per_visit')));
 		$view->urlSparklineBounceRate 		= $this->getUrlSparkline( 'getEvolutionGraph', array('columns' => array('bounce_rate')));
-		
+
+		$idSite = Piwik_Common::getRequestVar('idSite');
+		$displaySiteSearch = Piwik_Site::isSiteSearchEnabledFor($idSite);
+		if($displaySiteSearch)
+		{
+			$view->urlSparklineNbSearches 	= $this->getUrlSparkline( 'getEvolutionGraph', array('columns' => array('nb_searches', 'nb_keywords')));
+		}
+		$view->displaySiteSearch = $displaySiteSearch;
+
 		$dataTableVisit = self::getVisitsSummary();
-		$dataRow = $dataTableVisit->getFirstRow();
+		$dataRow = $dataTableVisit->getRowsCount() == 0 ? new Piwik_DataTable_Row() : $dataTableVisit->getFirstRow();
 		
-		$dataTableActions = Piwik_Actions_API::getInstance()->get(Piwik_Common::getRequestVar('idSite'), Piwik_Common::getRequestVar('period'), Piwik_Common::getRequestVar('date'), Piwik_Common::getRequestVar('segment',false));
-		$dataActionsRow = $dataTableActions->getFirstRow();
+		$dataTableActions = Piwik_Actions_API::getInstance()->get($idSite, Piwik_Common::getRequestVar('period'), Piwik_Common::getRequestVar('date'), Piwik_Common::getRequestVar('segment',false));
+		$dataActionsRow =
+			$dataTableActions->getRowsCount() == 0 ? new Piwik_DataTable_Row() : $dataTableActions->getFirstRow();
 		
 		$view->nbUniqVisitors = (int)$dataRow->getColumn('nb_uniq_visitors');
 		$nbVisits = (int)$dataRow->getColumn('nb_visits');
@@ -131,7 +147,13 @@ class Piwik_VisitsSummary_Controller extends Piwik_Controller
 		$view->bounceRate = Piwik::getPercentageSafe($nbBouncedVisits, $nbVisits);
 		$view->maxActions = (int)$dataRow->getColumn('max_actions');
 		$view->nbActionsPerVisit = $dataRow->getColumn('nb_actions_per_visit');
-		
+
+		if($displaySiteSearch)
+		{
+			$view->nbSearches = (int)$dataActionsRow->getColumn('nb_searches');
+			$view->nbKeywords = (int)$dataActionsRow->getColumn('nb_keywords');
+		}
+
 		// backward compatibility:
 		// show actions if the finer metrics are not archived
 		$view->showOnlyActions = false;

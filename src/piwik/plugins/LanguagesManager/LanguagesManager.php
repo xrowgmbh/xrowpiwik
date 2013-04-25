@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: LanguagesManager.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_LanguagesManager
@@ -35,6 +34,7 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 			'TopMenu.add' => 'showLanguagesSelector',
 			'Translate.getLanguageToLoad' => 'getLanguageToLoad',
 			'UsersManager.deleteUser' => 'deleteUserLanguage',
+			'template_topBar' => 'addLanguagesManagerToOtherTopBar',
 		);
 	}
 
@@ -65,12 +65,38 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 	 */
 	function showLanguagesSelector()
 	{
+		Piwik_AddTopMenu('LanguageSelector', $this->getLanguagesSelector(), true, $order = 30, true);
+	}
+	
+	/**
+	 * Adds the languages drop-down list to topbars other than the main one rendered
+	 * in CoreHome/templates/top_bar.tpl. The 'other' topbars are on the Installation
+	 * and CoreUpdater screens.
+	 * 
+	 * @param Piwik_Event_Notification $notification notification object
+	 */
+	public function addLanguagesManagerToOtherTopBar( $notification )
+	{
+		$str =& $notification->getNotificationObject();
+		// piwik object & scripts aren't loaded in 'other' topbars
+		$str .= "<script type='text/javascript'>if (!window.piwik) window.piwik={};</script>";
+		$str .= "<script type='text/javascript' src='plugins/LanguagesManager/templates/languageSelector.js'></script>";
+		$str .= $this->getLanguagesSelector();
+	}
+	
+	/**
+	 * Renders and returns the language selector HTML.
+	 * 
+	 * @return string
+	 */
+	private function getLanguagesSelector()
+	{
 		// don't use Piwik_View::factory() here
 		$view = new Piwik_View("LanguagesManager/templates/languages.tpl"); 
 		$view->languages = Piwik_LanguagesManager_API::getInstance()->getAvailableLanguageNames();
 		$view->currentLanguageCode = self::getLanguageCodeForCurrentUser();
 		$view->currentLanguageName = self::getLanguageNameForCurrentUser();
-		Piwik_AddTopMenu('LanguageSelector', $view->render(), true, $order = 30, true);
+		return $view->render();
 	}
 
 	/**

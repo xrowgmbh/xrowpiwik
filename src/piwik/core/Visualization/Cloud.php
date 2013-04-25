@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Cloud.php 6510 2012-07-13 20:05:39Z SteveG $
  *
  * @category Piwik
  * @package Piwik

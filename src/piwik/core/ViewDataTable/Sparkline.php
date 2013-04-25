@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Sparkline.php 6472 2012-06-12 09:18:57Z SteveG $
  * 
  * @category Piwik
  * @package Piwik

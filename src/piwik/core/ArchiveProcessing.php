@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ArchiveProcessing.php 6811 2012-08-17 14:44:17Z EZdesign $
  * 
  * @category Piwik
  * @package Piwik
@@ -297,8 +296,9 @@ abstract class Piwik_ArchiveProcessing
 			throw new Exception('Browser trigger archiving must be set to true or false.');
 		}
 		Piwik_SetOption(self::OPTION_BROWSER_TRIGGER_ARCHIVING, (int)$enabled, $autoload = true);
-		Piwik_Common::clearCacheGeneral();
+		Piwik_Tracker_Cache::clearCacheGeneral();
 	}
+
 	static public function isBrowserTriggerArchivingEnabled()
 	{
 		$browserArchivingEnabled = Piwik_GetOption(self::OPTION_BROWSER_TRIGGER_ARCHIVING);
@@ -567,11 +567,15 @@ abstract class Piwik_ArchiveProcessing
 		{
 			$temporary = 'temporary archive';
 		}
-		Piwik::log("'" . $this->period->getLabel() . "'" 
-								.", idSite = ". $this->idsite." ($temporary)" 
-								.", segment = '". $this->getSegment()->getString()."'"
-								.", report = '". $this->getRequestedReport()."'" 
-								.", UTC datetime [".$this->startDatetimeUTC." -> ".$this->endDatetimeUTC." ]...");
+        Piwik::log(sprintf("'%s, idSite = %d (%s), segment '%s', report = '%s', UTC datetime [%s -> %s]",
+            $this->period->getLabel(),
+            $this->idsite,
+            $temporary,
+            $this->getSegment()->getString(),
+            $this->getRequestedReport(),
+            $this->startDatetimeUTC,
+            $this->endTimestampUTC
+        ));
 	}
 	
 	/**
@@ -662,7 +666,8 @@ abstract class Piwik_ArchiveProcessing
 		if(empty($plugin)
 		    || !Piwik_PluginsManager::getInstance()->isPluginActivated($plugin))
 	    {
-	        throw new Exception("Error: The report '$requestedReport' was requested but it is not available at this stage. You may also disable the related plugin to avoid this error.");
+	    	$pluginStr = empty($plugin) ? '' : "($plugin)";
+	        throw new Exception("Error: The report '$requestedReport' was requested but it is not available at this stage. You may also disable the related plugin $pluginStr to avoid this error.");
 	    }
 		return $plugin;
 	}

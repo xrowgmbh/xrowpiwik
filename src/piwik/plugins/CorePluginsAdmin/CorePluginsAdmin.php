@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CorePluginsAdmin.php 2968 2010-08-20 15:26:33Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CorePluginsAdmin
@@ -33,9 +32,10 @@ class Piwik_CorePluginsAdmin extends Piwik_Plugin
 	
 	function addMenu()
 	{
-		Piwik_AddAdminMenu('CorePluginsAdmin_MenuPlugins', 
+		Piwik_AddAdminSubMenu('CorePluginsAdmin_MenuPlugins', null, "", Piwik::isUserIsSuperUser(), $order = 15);
+		Piwik_AddAdminSubMenu('CorePluginsAdmin_MenuPlugins', 'CorePluginsAdmin_MenuPluginsInstalled',
 							array('module' => 'CorePluginsAdmin', 'action' => 'index'),
 							Piwik::isUserIsSuperUser(),
-							$order = 7);		
+							$order = 1);
 	}
 }

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Daily.php 3387 2010-11-29 14:38:13Z JulienM $
  * 
  * @category Piwik
  * @package Piwik

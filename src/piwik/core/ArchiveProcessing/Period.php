@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Period.php 6924 2012-09-06 01:58:40Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -372,13 +371,19 @@ class Piwik_ArchiveProcessing_Period extends Piwik_ArchiveProcessing
 	}
 	
 	const FLAG_TABLE_PURGED = 'lastPurge_';
-	
+
+	// Used to disable Purge Outdated reports during test data setup
+	static public $enablePurgeOutdated = true;
+
 	/**
 	 * Given a monthly archive table, will delete all reports that are now outdated, 
 	 * or reports that ended with an error
 	 */
 	static public function doPurgeOutdatedArchives($numericTable)
 	{
+		if(!self::$enablePurgeOutdated) {
+			return;
+		}
 		$blobTable = str_replace("numeric", "blob", $numericTable);
 		$key = self::FLAG_TABLE_PURGED . $blobTable;
 		$timestamp = Piwik_GetOption($key);
@@ -398,9 +403,18 @@ class Piwik_ArchiveProcessing_Period extends Piwik_ArchiveProcessing
 				|| $timestamp < time() - $purgeEveryNSeconds))
 		{
 			Piwik_SetOption($key, time());
-			
-			$purgeArchivesOlderThan = Piwik_Date::factory(time() - $purgeEveryNSeconds)->getDateTime();
-			
+
+			// If Browser Archiving is enabled, it is likely there are many more temporary archives
+			// We delete more often which is safe, since reports are re-processed on demand
+			if(self::isBrowserTriggerArchivingEnabled())
+			{
+				$purgeArchivesOlderThan = Piwik_Date::factory(time() - 2 * $temporaryArchivingTimeout)->getDateTime();
+			}
+			// If archive.php via Cron is building the reports, we should keep all temporary reports from today
+			else
+			{
+				$purgeArchivesOlderThan = Piwik_Date::factory('today')->getDateTime();
+			}
 			$result = Piwik_FetchAll("
 				SELECT idarchive
 				FROM $numericTable

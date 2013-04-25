@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: MetadataCallbackAddMetadata.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -26,19 +25,29 @@ class Piwik_DataTable_Filter_MetadataCallbackAddMetadata extends Piwik_DataTable
 	private $metadataToRead;
 	private $functionToApply;
 	private $metadataToAdd;
+	private $applyToSummaryRow;
 
 	/**
 	 * @param Piwik_DataTable  $table
-	 * @param string           $metadataToRead
+	 * @param string|array     $metadataToRead
 	 * @param string           $metadataToAdd
 	 * @param callback         $functionToApply
+	 * @param bool	           $applyToSummaryRow
 	 */
-	public function __construct( $table, $metadataToRead, $metadataToAdd, $functionToApply )
+	public function __construct( $table, $metadataToRead, $metadataToAdd, $functionToApply,
+								   $applyToSummaryRow = true )
 	{
 		parent::__construct($table);
 		$this->functionToApply = $functionToApply;
+		
+		if (!is_array($metadataToRead))
+		{
+			$metadataToRead = array($metadataToRead);
+		}
+		
 		$this->metadataToRead = $metadataToRead;
 		$this->metadataToAdd = $metadataToAdd;
+		$this->applyToSummaryRow = $applyToSummaryRow;
 	}
 
 	/**
@@ -48,9 +57,22 @@ class Piwik_DataTable_Filter_MetadataCallbackAddMetadata extends Piwik_DataTable
 	{
 		foreach($table->getRows() as $key => $row)
 		{
-			$oldValue = $row->getMetadata($this->metadataToRead);
-			$newValue = call_user_func( $this->functionToApply, $oldValue);
-			$row->addMetadata($this->metadataToAdd, $newValue);
+			if (!$this->applyToSummaryRow && $key == Piwik_DataTable::ID_SUMMARY_ROW)
+			{
+				continue;
+			}
+			
+			$params = array();
+			foreach ($this->metadataToRead as $name)
+			{
+				$params[] = $row->getMetadata($name);
+			}
+			
+			$newValue = call_user_func_array($this->functionToApply, $params);
+			if($newValue !== false)
+			{
+				$row->addMetadata($this->metadataToAdd, $newValue);
+			}
 		}
 	}
 }

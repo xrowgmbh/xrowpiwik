@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitorGenerator.php 4271 2011-04-01 00:21:31Z vipsoft $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitorGenerator
@@ -32,11 +31,11 @@ class Piwik_VisitorGenerator extends Piwik_Plugin {
 	}
 
 	public function addMenu() {
-		Piwik_AddAdminMenu(
-				'VisitorGenerator_VisitorGenerator',
+		Piwik_AddAdminSubMenu(
+				'CoreAdminHome_MenuDiagnostic', 'VisitorGenerator_VisitorGenerator',
 				array('module' => 'VisitorGenerator', 'action' => 'index'),
 				Piwik::isUserIsSuperUser(),
-				$order = 10
+				$order = 20
 		);
 	}
 }

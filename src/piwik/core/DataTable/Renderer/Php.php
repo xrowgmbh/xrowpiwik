@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Php.php 6593 2012-07-30 09:14:18Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -97,7 +96,7 @@ class Piwik_DataTable_Renderer_Php extends Piwik_DataTable_Renderer
 	{
 		$this->renderHeader();
 
-		$exceptionMessage = self::renderHtmlEntities($this->exception->getMessage());
+		$exceptionMessage = $this->getExceptionMessage();
 		
 		$return = array('result' => 'error', 'message' => $exceptionMessage);
 		
@@ -131,7 +130,15 @@ class Piwik_DataTable_Renderer_Php extends Piwik_DataTable_Renderer
 			$dataTable = $this->table;
 		}
 		
-		if($dataTable instanceof Piwik_DataTable_Array)
+		if (is_array($dataTable))
+		{
+			$flatArray = $dataTable;
+			if (self::shouldWrapArrayBeforeRendering($flatArray))
+			{
+				$flatArray = array($flatArray);
+			}
+		}
+		else if ($dataTable instanceof Piwik_DataTable_Array)
 		{
 			$flatArray = array();
 			foreach($dataTable->getArray() as $keyName => $table)
@@ -142,7 +149,6 @@ class Piwik_DataTable_Renderer_Php extends Piwik_DataTable_Renderer
 				$this->serialize = $serializeSave;
 			}
 		}
-		
 		else if($dataTable instanceof Piwik_DataTable_Simple)
 		{
 			$flatArray = $this->renderSimpleTable($dataTable);
@@ -203,6 +209,8 @@ class Piwik_DataTable_Renderer_Php extends Piwik_DataTable_Renderer
 	 */
 	public function originalRender()
 	{
+		Piwik::checkObjectTypeIs($this->table, array('Piwik_DataTable_Simple', 'Piwik_DataTable'));
+		
 		if($this->table instanceof Piwik_DataTable_Simple)
 		{
 			$array = $this->renderSimpleTable($this->table);
@@ -210,10 +218,6 @@ class Piwik_DataTable_Renderer_Php extends Piwik_DataTable_Renderer
 		elseif($this->table instanceof Piwik_DataTable)
 		{
 			$array = $this->renderTable($this->table);
-		}
-		else
-		{
-			throw new Exception("Unexpected data type to render.");
 		}
 				
 		if($this->serialize)

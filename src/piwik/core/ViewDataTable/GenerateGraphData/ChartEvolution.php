@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ChartEvolution.php 6363 2012-05-29 05:50:06Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -28,11 +27,7 @@ class Piwik_ViewDataTable_GenerateGraphData_ChartEvolution extends Piwik_ViewDat
 	protected function checkStandardDataTable()
 	{
 		// DataTable_Array and DataTable allowed for the evolution chart
-		if(!($this->dataTable instanceof Piwik_DataTable_Array)
-			&& !($this->dataTable instanceof Piwik_DataTable))
-		{
-			throw new Exception("Unexpected data type to render.");
-		}
+		Piwik::checkObjectTypeIs($this->dataTable, array('Piwik_DataTable_Array', 'Piwik_DataTable'));
 	}
 	
 	protected function getViewDataTableId()
@@ -200,20 +195,9 @@ class Piwik_ViewDataTable_GenerateGraphData_ChartEvolution extends Piwik_ViewDat
 		$countGraphElements = $this->dataTable->getRowsCount();
 		$firstDatatable = reset($this->dataTable->metadata);
 		$period = $firstDatatable['period'];
-		switch($period->getLabel()) {
-			case 'day': $steps = 7; break;
-			case 'week': $steps = 10; break;
-			case 'month': $steps = 6; break;
-			case 'year': $steps = 2; break;
-			default: $steps = 10; break;
-		}
-		// For Custom Date Range, when the number of elements plotted can be small, make sure the X legend is useful
-		if($countGraphElements <= 20 ) 
-		{
-			$steps = 2;
-		}
 		
-		$this->view->setXSteps($steps);
+		$stepSize = $this->getXAxisStepSize($period->getLabel(), $countGraphElements);
+		$this->view->setXSteps($stepSize);
 		
 		if($this->isLinkEnabled())
 		{
@@ -320,5 +304,36 @@ class Piwik_ViewDataTable_GenerateGraphData_ChartEvolution extends Piwik_ViewDat
 							&& Piwik_Common::getRequestVar('period', 'day') != 'range';
 		}
 		return $linkEnabled;
+	}
+
+	private function getXAxisStepSize( $periodLabel, $countGraphElements )
+	{
+		// when the number of elements plotted can be small, make sure the X legend is useful
+		if ($countGraphElements <= 7)
+		{
+			return 1;
+		}
+		
+		switch ($periodLabel)
+		{
+			case 'day':
+					$steps = 5;
+				break;
+			case 'week':
+					$steps = 4;
+				break;
+			case 'month':
+					$steps = 5;
+				break;
+			case 'year':
+					$steps = 5;
+				break;
+			default:
+				$steps = 5;
+				break;
+		}
+		
+		$paddedCount = $countGraphElements + 2; // pad count so last label won't be cut off
+		return ceil($paddedCount / $steps);
 	}
 }

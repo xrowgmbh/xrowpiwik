@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Cloud.php 6300 2012-05-23 21:19:25Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -74,8 +73,14 @@ class Piwik_ViewDataTable_Cloud extends Piwik_ViewDataTable
 		$this->checkStandardDataTable();
 		$this->view = $this->buildView();
 	}
-	
-	function getColumnToDisplay()
+
+    /**
+     * Returns the name of the first numeric column to be displayed
+     * (second column to be displayed will be returned, as first is always label)
+     *
+     * @return string
+     */
+    public function getColumnToDisplay()
 	{
 		$columns = parent::getColumnsToDisplay();
 		// not label, but the first numeric column

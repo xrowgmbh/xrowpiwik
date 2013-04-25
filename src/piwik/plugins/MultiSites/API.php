@@ -4,16 +4,10 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php$
  * 
  * @category Piwik_Plugins
- * @package Piwik_Goals
+ * @package Piwik_MultiSites
  */
-
-/**
- * @see plugins/MultiSites/CalculateEvolutionFilter.php
- */
-require_once PIWIK_INCLUDE_PATH . '/plugins/MultiSites/CalculateEvolutionFilter.php';
 
 /**
  * The MultiSites API lets you request the key metrics (visits, page views, revenue) for all Websites in Piwik.
@@ -64,7 +58,7 @@ class Piwik_MultiSites_API
 	 * Returns the singleton instance of this class. The instance is created
 	 * if it hasn't been already.
 	 * 
-	 * @return Piwik_Goals_API
+	 * @return Piwik_MultiSites_API
 	 */
 	static public function getInstance()
 	{
@@ -96,20 +90,49 @@ class Piwik_MultiSites_API
 	 * @param bool|string $_restrictSitesToLogin Hack used to enforce we restrict the returned data to the specified username
 	 * 										Only used when a scheduled task is running
 	 * @param bool|string $enhanced When true, return additional goal & ecommerce metrics
+	 * @param bool|string $pattern If specified, only the website which names (or site ID) match the pattern will be returned using SitesManager.getPatternMatchSites
 	 * @return Piwik_DataTable
 	 */
-	public function getAll($period, $date, $segment = false, $_restrictSitesToLogin = false, $enhanced = false)
+	public function getAll($period, $date, $segment = false, $_restrictSitesToLogin = false, $enhanced = false, $pattern = false)
 	{
 		Piwik::checkUserHasSomeViewAccess();
 
+		$idSites = $this->getSitesIdFromPattern($pattern);
+
 		return $this->buildDataTable(
-			'all',
+			$idSites,
 			$period,
 			$date,
 			$segment,
 			$_restrictSitesToLogin,
-			$enhanced
+			$enhanced,
+			$multipleWebsitesRequested = true
 		);
+	}
+
+	/**
+	 * Fetches the list of sites which names match the string pattern
+	 *
+	 * @param $pattern
+	 * @return array|string
+	 */
+	private function getSitesIdFromPattern($pattern)
+	{
+		$idSites = 'all';
+		if (!empty($pattern)) {
+			$sites = Piwik_API_Request::processRequest('SitesManager.getPatternMatchSites',
+				array('pattern' => $pattern,
+					// added because caller could overwrite these
+					'serialize' => 0,
+					'format' => 'original'));
+			if (!empty($sites)) {
+				$idSites = array();
+				foreach ($sites as $site) {
+					$idSites[] = $site['idsite'];
+				}
+			}
+		}
+		return $idSites;
 	}
 
 	/**
@@ -127,21 +150,21 @@ class Piwik_MultiSites_API
 	 */
 	public function getOne($idSite, $period, $date, $segment = false, $_restrictSitesToLogin = false, $enhanced = false)
 	{
-		Piwik::checkUserHasSomeViewAccess();
-
+		Piwik::checkUserHasViewAccess($idSite);
 		return $this->buildDataTable(
 			$idSite,
 			$period,
 			$date,
 			$segment,
 			$_restrictSitesToLogin,
-			$enhanced
+			$enhanced,
+			$multipleWebsitesRequested = false
 		);
 	}
 
-	private function buildDataTable($sites, $period, $date, $segment, $_restrictSitesToLogin, $enhanced)
+	private function buildDataTable($sites, $period, $date, $segment, $_restrictSitesToLogin, $enhanced, $multipleWebsitesRequested)
 	{
-		$allWebsitesRequested = $sites == 'all';
+		$allWebsitesRequested = ($sites == 'all');
 		if($allWebsitesRequested)
 		{
 			if (Piwik::isUserIsSuperUser()
@@ -192,7 +215,8 @@ class Piwik_MultiSites_API
 		$dataTable = $archive->getDataTableFromNumeric($fieldsToGet);
 
 		// get rid of the DataTable_Array that is created by the IndexedBySite archive type
-		if($dataTable instanceof Piwik_DataTable_Array && $allWebsitesRequested)
+		if($dataTable instanceof Piwik_DataTable_Array
+				&& $multipleWebsitesRequested)
 		{
 			$dataTable = $dataTable->mergeChildren();
 		}
@@ -204,34 +228,23 @@ class Piwik_MultiSites_API
 				$firstDataTableRow->setColumn('label', $sites);
 			}
 		}
-		
+
 		// calculate total visits/actions/revenue
 		$this->setMetricsTotalsMetadata($dataTable, $apiMetrics);
 
 		// if the period isn't a range & a lastN/previousN date isn't used, we get the same
 		// data for the last period to show the evolution of visits/actions/revenue
-		if ($period != 'range' && !preg_match('/(last|previous)([0-9]*)/', $date, $regs))
+		list($strLastDate, $lastPeriod) = Piwik_Period_Range::getLastDate($date, $period);
+		if ($strLastDate !== false)
 		{
-			if (strpos($date, ',')) // date in the form of 2011-01-01,2011-02-02
+			if ($lastPeriod !== false)
 			{
-				$rangePeriod = new Piwik_Period_Range($period, $date);
-
-				$lastStartDate = Piwik_Period_Range::removePeriod($period, $rangePeriod->getDateStart(), $n = 1);
-				$lastEndDate = Piwik_Period_Range::removePeriod($period, $rangePeriod->getDateEnd(), $n = 1);
-
-				$strLastDate = "$lastStartDate,$lastEndDate";
-			}
-			else
-			{
-				$lastPeriod = Piwik_Period_Range::removePeriod($period, Piwik_Date::factory($date), $n = 1);
-				$strLastDate = $lastPeriod->toString();
-				
 				// NOTE: no easy way to set last period date metadata when range of dates is requested.
 				//       will be easier if DataTable_Array::metadata is removed, and metadata that is
 				//       put there is put directly in Piwik_DataTable::metadata.
 				$dataTable->setMetadata(self::getLastPeriodMetadataName('date'), $lastPeriod);
 			}
-
+			
 			$pastArchive = Piwik_Archive::build('all', $period, $strLastDate, $segment, $_restrictSitesToLogin);
 			$pastData = $pastArchive->getDataTableFromNumeric($fieldsToGet);
 
@@ -268,7 +281,7 @@ class Piwik_MultiSites_API
 		$dataTable->filter('ColumnCallbackAddMetadata', array('label', 'idsite'));
 
 		// set the label of each row to the site name
-		if($allWebsitesRequested)
+		if($multipleWebsitesRequested)
 		{
 			$getNameFor = array('Piwik_Site', 'getNameFor');
 			$dataTable->filter('ColumnCallbackReplace', array('label', $getNameFor));
@@ -286,7 +299,7 @@ class Piwik_MultiSites_API
 
 		// filter rows without visits
 		// note: if only one website is queried and there are no visits, we can not remove the row otherwise Piwik_API_ResponseBuilder throws 'Call to a member function getColumns() on a non-object'
-		if($allWebsitesRequested)
+		if($multipleWebsitesRequested)
 		{
 			$dataTable->filter(
 				'ColumnCallbackDeleteRow',
@@ -325,12 +338,12 @@ class Piwik_MultiSites_API
 			foreach ($apiMetrics as $metricSettings)
 			{
 				$currentData->filter(
-					'Piwik_MultiSites_CalculateEvolutionFilter',
+					'CalculateEvolutionFilter',
 					array(
 						$pastData,
 						$metricSettings[self::METRIC_EVOLUTION_COL_NAME_KEY],
 						$metricSettings[self::METRIC_RECORD_NAME_KEY],
-						$quotientPrecision = 2)
+						$quotientPrecision = 1)
 				);
 			}
 		}
@@ -422,7 +435,7 @@ class Piwik_MultiSites_API
 				
 				// calculate & set evolution
 				$currentTotal = $dataTable->getMetadata($totalMetadataName);
-				$evolution = Piwik_MultiSites_CalculateEvolutionFilter::calculate($currentTotal, $pastTotal);
+				$evolution = Piwik_DataTable_Filter_CalculateEvolutionFilter::calculate($currentTotal, $pastTotal);
 				$dataTable->setMetadata($totalEvolutionMetadataName, $evolution);
 			}
 		}

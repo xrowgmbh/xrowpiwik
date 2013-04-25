@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Day.php 6980 2012-09-13 02:22:04Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -320,7 +319,8 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	 * @param bool|string   $orderBy    order by clause
 	 * @param Piwik_RankingQuery  $rankingQuery     pre-configured ranking query instance
 	 * @param bool|string   $joinLogActionOnColumn  column from log_link_visit_action that
-	 *                                              log_action should be joined on
+	 *                                              log_action should be joined on.
+	 * 												can be an array to join multiple times.
 	 * @param bool|string   $addSelect  additional select clause
 	 * @return mixed
 	 */
@@ -366,13 +366,29 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 		
 		if ($joinLogActionOnColumn !== false)
 		{
-			$from = array(
-				$from,
-				array(
+			$multiJoin = is_array($joinLogActionOnColumn);
+			if (!$multiJoin)
+			{
+				$joinLogActionOnColumn = array($joinLogActionOnColumn);
+			}
+			
+			$from = array($from);
+			
+			foreach ($joinLogActionOnColumn as $i => $joinColumn)
+			{
+				$tableAlias = 'log_action'.($multiJoin ? $i + 1 : '');
+				if (strpos($joinColumn, ' ') === false) {
+					$joinOn = $tableAlias.'.idaction = log_link_visit_action.'.$joinColumn;
+				} else {
+					// more complex join column like IF(...)
+					$joinOn = $tableAlias.'.idaction = '.$joinColumn;
+				}
+				$from[] = array(
 					'table' => 'log_action', 
-					'joinOn' => 'log_action.idaction = log_link_visit_action.'.$joinLogActionOnColumn,
-				)
-			);
+					'tableAlias' => $tableAlias,
+					'joinOn' => $joinOn
+				);
+			}
 		}
 		
 		if ($addSelect !== false)
@@ -640,7 +656,7 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	 * @param array $array
 	 * @return Piwik_DataTable
 	 */
-	public function getDataTableFromArray( $array )
+	static public function getDataTableFromArray( $array )
 	{
 		$table = new Piwik_DataTable();
 		$table->addRowsFromArrayWithIndexLabel($array);

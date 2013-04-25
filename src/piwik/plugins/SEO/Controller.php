@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5680 2012-01-17 22:18:58Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_SEO

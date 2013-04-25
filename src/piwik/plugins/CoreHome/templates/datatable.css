@@ -169,6 +169,11 @@ table.dataTable th.label {
 	border-left: 0;
 }
 
+table.dataTableActions th.label {
+    /* Ensures tables have enough space to display subtable on click, and prevent the jumping effect */
+    min-width: 250px;
+}
+
 table.dataTable span.label.highlighted {
 	font-style: italic;
 }
@@ -343,6 +348,11 @@ table thead div {
 	height: 0;
 }
 
+.dataTable .loadingPiwikBelow {
+	padding-bottom:5px;
+	display:block;
+	text-align:center;
+}
 
 .dataTableFooterIcons {
 	display:block; 
@@ -592,8 +602,16 @@ table.dataTable .dataTableRowActions {
 table.dataTable .dataTableRowActions a {
 	display: block;
 	float: left;
-	padding: 6px;
-	margin: 0 6px 0 0;
+	padding: 6px 4px 6px 0;
+	margin: 0;
+}
+
+table.dataTable .dataTableRowActions a.leftmost {
+	padding-left: 4px;
+}
+
+table.dataTable .dataTableRowActions a.rightmost {
+	padding-right: 8px;
 }
 
 table.dataTable .dataTableRowActions a img {
@@ -604,12 +622,18 @@ table.dataTable .dataTableRowActions a img {
 	height: 17px;
 }
 
+body .piwik-tooltip.rowActionTooltip {
+	font-size: 11px;
+	padding: 3px 5px 3px 6px;
+}
+
 
 .limitSelection {
     float: right;
     position: relative;
     margin-left: 5px;
     min-height: 20px;
+    z-index:1;
 }
 
 .limitSelection.hidden {

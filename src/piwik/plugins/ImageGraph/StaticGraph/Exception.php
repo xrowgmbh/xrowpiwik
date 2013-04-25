@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Exception.php 6970 2012-09-10 23:31:37Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph_StaticGraph
@@ -29,6 +28,23 @@ class Piwik_ImageGraph_StaticGraph_Exception extends Piwik_ImageGraph_StaticGrap
 	protected function getDefaultColors()
 	{
 		return array();
+	}
+
+
+	public function setWidth($width)
+	{
+		if(empty($width)) {
+			$width = 450;
+		}
+		parent::setWidth($width);
+	}
+
+	public function setHeight($height)
+	{
+		if(empty($height)) {
+			$height = 300;
+		}
+		parent::setHeight($height);
 	}
 
 	public function renderGraph()

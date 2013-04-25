@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Mysql.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -165,6 +164,9 @@ class Piwik_Db_Adapter_Pdo_Mysql extends Zend_Db_Adapter_Pdo_Mysql implements Pi
 	public function isConnectionUTF8()
 	{
 		$charsetInfo = $this->fetchAll('SHOW VARIABLES LIKE ?', array('character_set_connection'));
+		if(empty($charsetInfo)) {
+			return false;
+		}
 		$charset = $charsetInfo[0]['Value'];
 		return $charset === 'utf8';
 	}

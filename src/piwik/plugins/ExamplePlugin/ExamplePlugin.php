@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExamplePlugin.php 6427 2012-05-31 23:26:11Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExamplePlugin
@@ -41,6 +40,7 @@ class Piwik_ExamplePlugin extends Piwik_Plugin
 	{
 		return array(
 //			'Controller.renderView' => 'addUniqueVisitorsColumnToGivenReport',
+            'WidgetsList.add' => 'addWidgets',
 		);
 	}
 
@@ -68,7 +68,7 @@ class Piwik_ExamplePlugin extends Piwik_Plugin
 		}
 	}
 	
-	function postLoad()
+	function addWidgets()
 	{
 		// we register the widgets so they appear in the "Add a new widget" window in the dashboard
 		// Note that the first two parameters can be either a normal string, or an index to a translation string

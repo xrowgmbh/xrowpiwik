@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DocumentationGenerator.php 6918 2012-09-04 21:44:26Z JulienM $
  * 
  * @category Piwik
  * @package Piwik
@@ -66,7 +65,7 @@ class Piwik_API_DocumentationGenerator
 				continue;
 			}
 			$toc .= "<a href='#$moduleName'>$moduleName</a><br/>";
-			$str .= "\n<h2 name='$moduleName' id='$moduleName'>Module ".$moduleName."</h2>";
+			$str .= "\n<a  name='$moduleName' id='$moduleName'></a><h2>Module ".$moduleName."</h2>";
 			$str .= "<div class='apiDescription'> ".$info['__documentation'] . " </div>";
 			foreach($info as $methodName => $infoMethod)
 			{
@@ -143,6 +142,7 @@ class Piwik_API_DocumentationGenerator
 			'apiAction' => 'getCountry',
 			'lastMinutes' => '30',
 			'abandonedCarts' => '0',
+			'ip' => '194.57.91.215',
 		);
 		
 		foreach($parametersToSet as $name => $value)
@@ -196,6 +196,7 @@ class Piwik_API_DocumentationGenerator
         $aParameters['filter_truncate'] = false;
         $aParameters['hideColumns'] = false;
         $aParameters['showColumns'] = false;
+        $aParameters['filter_pattern_recursive'] = false;
         
 		$moduleName = Piwik_API_Proxy::getInstance()->getModuleNameFromClassName($class);
 		$aParameters = array_merge(array('module' => 'API', 'method' => $moduleName.'.'.$methodName), $aParameters);

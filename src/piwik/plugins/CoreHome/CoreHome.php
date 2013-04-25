@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CoreHome.php 6860 2012-08-22 12:34:24Z EZdesign $
  *
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -30,8 +29,20 @@ class Piwik_CoreHome extends Piwik_Plugin
 	{
 		return array(
 			'AssetManager.getCssFiles' => 'getCssFiles',
-			'AssetManager.getJsFiles' => 'getJsFiles'
+			'AssetManager.getJsFiles' => 'getJsFiles',
+			'WidgetsList.add' => 'addWidgets',
 		);
+	}
+	
+	/**
+	 * Adds the donate form widget.
+	 * 
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
+	public function addWidgets()
+	{
+		Piwik_AddWidget('Example Widgets', 'CoreHome_SupportPiwik', 'CoreHome', 'getDonateForm');
+		Piwik_AddWidget('Example Widgets', 'Installation_Welcome', 'CoreHome', 'getPromoVideo');
 	}
 
 	/**
@@ -49,6 +60,7 @@ class Piwik_CoreHome extends Piwik_Plugin
 		$cssFiles[] = "plugins/CoreHome/templates/cloud.css";
 		$cssFiles[] = "plugins/CoreHome/templates/jquery.ui.autocomplete.css";
 		$cssFiles[] = "plugins/CoreHome/templates/jqplot.css";
+		$cssFiles[] = "plugins/CoreHome/templates/donate.css";
 	}
 
 	/**
@@ -64,18 +76,22 @@ class Piwik_CoreHome extends Piwik_Plugin
 		$jsFiles[] = "libs/jquery/jquery.truncate.js";
 		$jsFiles[] = "libs/jquery/jquery.scrollTo.js";
 		$jsFiles[] = "libs/jquery/jquery.history.js";
-		$jsFiles[] = "libs/swfobject/swfobject.js";
 		$jsFiles[] = "libs/javascript/sprintf.js";
 		$jsFiles[] = "themes/default/common.js";
+		$jsFiles[] = "themes/default/ajaxHelper.js";
 		$jsFiles[] = "plugins/CoreHome/templates/tooltip.js";
 		$jsFiles[] = "plugins/CoreHome/templates/datatable.js";
 		$jsFiles[] = "plugins/CoreHome/templates/datatable_rowactions.js";
+		$jsFiles[] = "plugins/CoreHome/templates/popover.js";
 		$jsFiles[] = "plugins/CoreHome/templates/broadcast.js";
 		$jsFiles[] = "plugins/CoreHome/templates/menu.js";
+		$jsFiles[] = "plugins/CoreHome/templates/menu_init.js";
 		$jsFiles[] = "plugins/CoreHome/templates/calendar.js";
 		$jsFiles[] = "plugins/CoreHome/templates/date.js";
 		$jsFiles[] = "plugins/CoreHome/templates/autocomplete.js";
 		$jsFiles[] = "plugins/CoreHome/templates/sparkline.js";
+		$jsFiles[] = "plugins/CoreHome/templates/misc.js";
+		$jsFiles[] = "plugins/CoreHome/templates/donate.js";
 		
 		$jsFiles[] = "plugins/CoreHome/templates/jqplot.js";
 		$jsFiles[] = "libs/jqplot/jqplot-custom.min.js";

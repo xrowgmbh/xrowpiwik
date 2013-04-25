@@ -91,6 +91,8 @@
             dashboardLayout = null;
             dashboardId     = dashboardIdToLoad;
             piwikHelper.showAjaxLoading();
+            broadcast.updateHashOnly = true;
+            broadcast.propagateAjax('?idDashboard='+dashboardIdToLoad);
             fetchLayout(generateLayout);
             buildMenu();
             return this;
@@ -124,6 +126,15 @@
         },
 
         /**
+         * Return the current dashboard id
+         *
+         * @return {int}
+         */
+        getDashboardId: function() {
+            return dashboardId;
+        },
+
+        /**
          * Sets a new name for the current dashboard
          *
          * @param {String} newName
@@ -154,18 +165,20 @@
          */
         resetLayout: function()
         {
-            var ajaxRequest =
-            {
-                type: 'POST',
-                url: 'index.php?module=Dashboard&action=resetLayout&token_auth='+piwik.token_auth,
-                dataType: 'html',
-                async: false,
-                error: piwikHelper.ajaxHandleError,
-                success: function() { methods.loadDashboard.apply(this, [dashboardId])},
-                data: { "idDashboard": dashboardId, "idSite": piwik.idSite }
-            };
-            piwikHelper.showAjaxLoading();
-            $.ajax(ajaxRequest);
+            var ajaxRequest = new ajaxHelper();
+            ajaxRequest.addParams({
+                module:      'Dashboard',
+                action:      'resetLayout',
+                idDashboard: dashboardId
+            }, 'get');
+            ajaxRequest.setCallback(
+                function () {
+                    methods.loadDashboard.apply(this, [dashboardId])
+                }
+            );
+            ajaxRequest.setLoadingElement();
+            ajaxRequest.setFormat('html');
+            ajaxRequest.send(true);
         },
 
         /**
@@ -225,22 +238,15 @@
      */
     function fetchLayout(callback)
     {
-        piwikHelper.abortQueueAjax();
-        var ajaxRequest =
-        {
-            type: 'GET',
-            url: 'index.php?module=Dashboard&action=getDashboardLayout',
-            dataType: 'json',
-            async: true,
-            error: piwikHelper.ajaxHandleError,
-            success: callback,
-            data: {
-                idDashboard: dashboardId,
-                token_auth: piwik.token_auth,
-                idSite: piwik.idSite
-            }
-        };
-        piwikHelper.queueAjaxRequest($.ajax(ajaxRequest));
+        globalAjaxQueue.abort();
+        var ajaxRequest = new ajaxHelper();
+        ajaxRequest.addParams({
+            module: 'Dashboard',
+            action: 'getDashboardLayout',
+            idDashboard: dashboardId
+        }, 'get');
+        ajaxRequest.setCallback(callback);
+        ajaxRequest.send(false);
     }
 
     /**
@@ -271,6 +277,21 @@
                 if(dashboardLayout.columns.length >= i) {
                     dashboardLayout.columns.pop();
                 }
+                // move widgets to other columns depending on columns height
+                $('[widgetId]', $('.col:last')).each(function(id, elem){
+                    var cols = $('.col').slice(0, columnCount);
+                    var smallestColumn = $(cols[0]);
+                    var smallestColumnHeight = null;
+                    cols.each(function(colId, col){
+                        if (smallestColumnHeight == null || smallestColumnHeight > $(col).height()) {
+                            smallestColumnHeight = $(col).height();
+                            smallestColumn = $(col);
+                        }
+                    });
+
+                    $(elem).appendTo(smallestColumn);
+                });
+
                 $('.col:last').remove();
             }
         }
@@ -349,9 +370,9 @@
         var widgetContent = '<div class="sortable" widgetId="'+uniqueId+'"></div>';
 
         if (addWidgetOnTop) {
-            $('.col::nth-child('+columnNumber+')', dashboardElement).prepend(widgetContent);
+            $('.col:nth-child('+columnNumber+')', dashboardElement).prepend(widgetContent);
         } else {
-            $('.col::nth-child('+columnNumber+')', dashboardElement).append(widgetContent);
+            $('.col:nth-child('+columnNumber+')', dashboardElement).append(widgetContent);
         }
 
         $('[widgetId='+uniqueId+']', dashboardElement).dashboardWidget({
@@ -367,7 +388,8 @@
     /**
      * Make all widgets on the dashboard sortable
      */
-    function makeWidgetsSortable() {
+    function makeWidgetsSortable()
+    {
         function onStart(event, ui) {
             if (!jQuery.support.noCloneEvent) {
                 $('object', this).hide();
@@ -406,45 +428,45 @@
      * Builds the menu for choosing between available dashboards
      */
     function buildMenu() {
-        var ajaxRequest =
-        {
-            type: 'POST',
-            url: 'index.php?module=Dashboard&action=getAllDashboards&token_auth='+piwik.token_auth,
-            dataType: 'json',
-            async: true,
-            success: function(dashboards) {
-                var dashboardMenuList = $('#Dashboard > ul');
-                dashboardMenuList.empty();
-                if (dashboards.length > 1) {
-                    dashboardMenuList.show();
-                    for (var i=0; i<dashboards.length; i++) {
-                        dashboardMenuList.append('<li id="Dashboard_embeddedIndex_'+dashboards[i].iddashboard+'" class="dashboardMenuItem"><a dashboardId="'+dashboards[i].iddashboard+'">'+ piwikHelper.htmlEntities( dashboards[i].name ) +'</a></li>');
-                        if(dashboards[i].iddashboard == dashboardId) {
-                            dashboardName = dashboards[i].name;
-                        }
-                    }
-                    $('li a', dashboardMenuList).each(function(){$(this).css({width:$(this).width()+30, paddingLeft:0, paddingRight:0});});
-                    $('#Dashboard_embeddedIndex_'+dashboardId).addClass('sfHover');
-                } else {
-                    dashboardMenuList.hide();
-                }
 
-                $('.dashboardMenuItem').on('click', function() {
-                    if (typeof piwikMenu != 'undefined') {
-                        piwikMenu.activateMenu('Dashboard', 'embeddedIndex');
+        var success = function(dashboards) {
+            var dashboardMenuList = $('#Dashboard > ul');
+            dashboardMenuList.empty();
+            if (dashboards.length > 1) {
+                dashboardMenuList.show();
+                for (var i=0; i<dashboards.length; i++) {
+                    dashboardMenuList.append('<li id="Dashboard_embeddedIndex_'+dashboards[i].iddashboard+'" class="dashboardMenuItem"><a dashboardId="'+dashboards[i].iddashboard+'">'+ piwikHelper.htmlEntities( dashboards[i].name ) +'</a></li>');
+                    if(dashboards[i].iddashboard == dashboardId) {
+                        dashboardName = dashboards[i].name;
                     }
-                    $('.dashboardMenuItem').removeClass('sfHover');
-                    if ($(dashboardElement).length) {
-                        $(dashboardElement).dashboard('loadDashboard', $('a', this).attr('dashboardId'));
-                    } else {
-                        broadcast.propagateAjax('module=Dashboard&action=embeddedIndex&idDashboard='+$('a', this).attr('dashboardId'));
-                    }
-                    $(this).addClass('sfHover');
-                });
-            },
-            error: piwikHelper.ajaxHandleError
+                }
+                $('li a', dashboardMenuList).each(function(){$(this).css({width:$(this).width()+30, paddingLeft:0, paddingRight:0});});
+                $('#Dashboard_embeddedIndex_'+dashboardId).addClass('sfHover');
+            } else {
+                dashboardMenuList.hide();
+            }
+
+            $('.dashboardMenuItem').on('click', function() {
+                if (typeof piwikMenu != 'undefined') {
+                    piwikMenu.activateMenu('Dashboard', 'embeddedIndex');
+                }
+                $('.dashboardMenuItem').removeClass('sfHover');
+                if ($(dashboardElement).length) {
+                    $(dashboardElement).dashboard('loadDashboard', $('a', this).attr('dashboardId'));
+                } else {
+                    broadcast.propagateAjax('module=Dashboard&action=embeddedIndex&idDashboard='+$('a', this).attr('dashboardId'));
+                }
+                $(this).addClass('sfHover');
+            });
         };
-        piwikHelper.queueAjaxRequest( $.ajax(ajaxRequest) );
+
+        var ajaxRequest = new ajaxHelper();
+        ajaxRequest.addParams({
+            module: 'Dashboard',
+            action: 'getAllDashboards'
+        }, 'get');
+        ajaxRequest.setCallback(success);
+        ajaxRequest.send(false);
     }
 
     /**
@@ -478,26 +500,26 @@
                 action = 'saveLayout';
             }
 
-            var ajaxRequest =
-            {
-                type: 'POST',
-                url: 'index.php?module=Dashboard&action='+action+'&token_auth='+piwik.token_auth,
-                dataType: 'html',
-                async: true,
-                success: function() {
+            var ajaxRequest = new ajaxHelper();
+            ajaxRequest.addParams({
+                module: 'Dashboard',
+                action: action,
+                idDashboard: dashboardId
+            }, 'get');
+            ajaxRequest.addParams({
+                layout: JSON.stringify(dashboardLayout),
+                name: dashboardName
+            }, 'post');
+            ajaxRequest.setCallback(
+                function () {
                     if(dashboardChanged) {
                         dashboardChanged = false;
                         buildMenu();
                     }
-                },
-                error: piwikHelper.ajaxHandleError,
-                data: {
-                    layout: JSON.stringify(dashboardLayout),
-                    name: dashboardName,
-                    idDashboard: dashboardId
                 }
-            };
-            $.ajax(ajaxRequest);
+            );
+            ajaxRequest.setFormat('html');
+            ajaxRequest.send(false);
         }
     }
 
@@ -508,22 +530,21 @@
         if (dashboardId == 1) {
             return; // dashboard with id 1 should never be deleted, as it is the default
         }
-        var ajaxRequest =
-        {
-            type: 'POST',
-            url: 'index.php?module=Dashboard&action=removeDashboard&token_auth='+piwik.token_auth,
-            dataType: 'html',
-            async: false,
-            success: function() {
+
+        var ajaxRequest = new ajaxHelper();
+        ajaxRequest.setLoadingElement();
+        ajaxRequest.addParams({
+            module: 'Dashboard',
+            action: 'removeDashboard',
+            idDashboard: dashboardId
+        }, 'get');
+        ajaxRequest.setCallback(
+            function () {
                 methods.loadDashboard.apply(this, [1]);
-            },
-            error: piwikHelper.ajaxHandleError,
-            data: {
-                idDashboard: dashboardId
             }
-        };
-        piwikHelper.showAjaxLoading();
-        $.ajax(ajaxRequest);
+        );
+        ajaxRequest.setFormat('html');
+        ajaxRequest.send(true);
     }
 
     /**

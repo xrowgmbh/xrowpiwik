@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Provider.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_Provider
@@ -68,7 +67,7 @@ class Piwik_Provider extends Piwik_Plugin
 		$segments =& $notification->getNotificationObject();
 		$segments[] = array(
 		        'type' => 'dimension',
-		        'category' => 'Visit',
+		        'category' => 'Visit Location',
 		        'name' => Piwik_Translate('Provider_ColumnProvider'),
 		        'segment' => 'provider',
 				'acceptedValues' => 'comcast.net, proxad.net, etc.',
@@ -103,7 +102,7 @@ class Piwik_Provider extends Piwik_Plugin
 	
 	function addWidget()
 	{
-		Piwik_AddWidget('General_Visitors', 'Provider_WidgetProviders', 'Provider', 'getProvider');
+		Piwik_AddWidget( 'General_Visitors', 'Provider_WidgetProviders', 'Provider', 'getProvider');
 	}
 	
 	function addMenu()
@@ -114,7 +113,6 @@ class Piwik_Provider extends Piwik_Plugin
 	
 	function postLoad()
 	{
-		Piwik_AddAction('template_headerUserCountry', array('Piwik_Provider','headerUserCountry'));
 		Piwik_AddAction('template_footerUserCountry', array('Piwik_Provider','footerUserCountry'));
 	}
 
@@ -162,6 +160,12 @@ class Piwik_Provider extends Piwik_Plugin
 	public function logProviderInfo($notification)
 	{
 		$visitorInfo =& $notification->getNotificationObject();
+		
+		// if provider info has already been set, abort
+		if (!empty($visitorInfo['location_provider']))
+		{
+			return;
+		}
 		
 		$ip = Piwik_IP::N2P($visitorInfo['location_ip']);
 		
@@ -250,20 +254,10 @@ class Piwik_Provider extends Piwik_Plugin
 	/**
 	 * @param Piwik_Event_Notification $notification  notification object
 	 */
-	static public function headerUserCountry($notification)
-	{
-		$out =& $notification->getNotificationObject();
-		$out = '<div id="leftcolumn">';
-	}
-
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
 	static public function footerUserCountry($notification)
 	{
 		$out =& $notification->getNotificationObject();
-		$out = '</div>
-			<div id="rightcolumn">
+		$out = '<div>
 			<h2>'.Piwik_Translate('Provider_WidgetProviders').'</h2>';
 		$out .= Piwik_FrontController::getInstance()->fetchDispatch('Provider','getProvider');
 		$out .= '</div>';

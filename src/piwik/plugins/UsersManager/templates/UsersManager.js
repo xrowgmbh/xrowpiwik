@@ -5,85 +5,86 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-function getUpdateUserAJAX( row )
+function sendUpdateUserAJAX( row )
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf('ajaxLoadingUsersManagement', 'ajaxErrorUsersManagement');
-	
 	var parameters = {};
-	parameters.module = 'API';
-	parameters.format = 'json';
-	parameters.method =  'UsersManager.updateUser';
 	parameters.userLogin = $(row).children('#userLogin').html();
 	var password =  $(row).find('input#password').val();
 	if(password != '-') parameters.password = password;
 	parameters.email = $(row).find('input#email').val();
 	parameters.alias = $(row).find('input#alias').val();
-	parameters.token_auth = piwik.token_auth;
-	
-	ajaxRequest.data = parameters;
-	
-	return ajaxRequest;
+
+    var ajaxHandler = new ajaxHelper();
+    ajaxHandler.addParams({
+        module: 'API',
+        format: 'json',
+        method: 'UsersManager.updateUser'
+    }, 'GET');
+    ajaxHandler.addParams(parameters, 'POST');
+    ajaxHandler.redirectOnSuccess();
+    ajaxHandler.setLoadingElement();
+    ajaxHandler.send(true);
 }
 
-function getDeleteUserAJAX( login )
+function sendDeleteUserAJAX( login )
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf('ajaxLoadingUsersManagement', 'ajaxErrorUsersManagement');
-		
-	var parameters = {};
-	parameters.module = 'API';
-	parameters.format = 'json';
- 	parameters.method =  'UsersManager.deleteUser';
- 	parameters.userLogin = login;
- 	parameters.token_auth = piwik.token_auth;
-	
-	ajaxRequest.data = parameters;
-	
-	return ajaxRequest;
+    var ajaxHandler = new ajaxHelper();
+    ajaxHandler.addParams({
+        module: 'API',
+        format: 'json',
+        method: 'UsersManager.deleteUser'
+    }, 'GET');
+    ajaxHandler.addParams({userLogin: login}, 'POST');
+    ajaxHandler.redirectOnSuccess();
+    ajaxHandler.setLoadingElement('#ajaxLoadingUsersManagement');
+    ajaxHandler.setErrorElement('#ajaxErrorUsersManagement');
+    ajaxHandler.send(true);
 }
 
-function getAddUserAJAX( row )
+function sendAddUserAJAX( row )
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf('ajaxLoadingUsersManagement', 'ajaxErrorUsersManagement');
-	
 	var parameters = {};
-	parameters.module = 'API';
-	parameters.format = 'json';
- 	parameters.method =  'UsersManager.addUser';
  	parameters.userLogin = $(row).find('input#useradd_login').val();
  	parameters.password =  $(row).find('input#useradd_password').val();
  	parameters.email = $(row).find('input#useradd_email').val();
  	parameters.alias = $(row).find('input#useradd_alias').val();
- 	parameters.token_auth = piwik.token_auth;
- 	
-	ajaxRequest.data = parameters;
- 	
-	return ajaxRequest;
+
+    var ajaxHandler = new ajaxHelper();
+    ajaxHandler.addParams({
+        module: 'API',
+        format: 'json',
+        method: 'UsersManager.addUser'
+    }, 'GET');
+    ajaxHandler.addParams(parameters, 'POST');
+    ajaxHandler.redirectOnSuccess();
+    ajaxHandler.setLoadingElement('#ajaxLoadingUsersManagement');
+    ajaxHandler.setErrorElement('#ajaxErrorUsersManagement');
+    ajaxHandler.send(true);
 }
 
 function getIdSites()
 {
-	return $('#sitesSelectionSearch .custom_select_main_link').attr('siteid');
+	return $('.custom_select_main_link').attr('siteid');
 }
 
-function getUpdateUserAccess(login, access, successCallback)
+function sendUpdateUserAccess(login, access, successCallback)
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf();
-	
-	ajaxRequest.success = successCallback;
-	ajaxRequest.async = false;
-	
 	var parameters = {};
-	parameters.module = 'API';
-	parameters.format = 'json';
- 	parameters.method =  'UsersManager.setUserAccess';
  	parameters.userLogin = login;
  	parameters.access = access;
  	parameters.idSites = getIdSites();
- 	parameters.token_auth = piwik.token_auth;
 
-	ajaxRequest.data = parameters;
- 	
-	return ajaxRequest;
+    var ajaxHandler = new ajaxHelper();
+    ajaxHandler.addParams({
+        module: 'API',
+        format: 'json',
+        method: 'UsersManager.setUserAccess'
+    }, 'GET');
+    ajaxHandler.addParams(parameters, 'POST');
+    ajaxHandler.setCallback(successCallback);
+    ajaxHandler.setLoadingElement('#ajaxLoadingUsersManagement');
+    ajaxHandler.setErrorElement('#ajaxErrorUsersManagement');
+    ajaxHandler.send(true);
 }
 
 function submitOnEnter(e)
@@ -98,12 +99,11 @@ function submitOnEnter(e)
 
 function launchAjaxRequest(self, successCallback)
 {
-	$.ajax( getUpdateUserAccess( 
-					$(self).parent().parent().find('#login').html(),//if changed change also the modal
-					$(self).parent().attr('id'),
-					successCallback
-				) 
-			);	
+    sendUpdateUserAccess(
+        $(self).parent().parent().find('#login').html(), //if changed change also the modal
+        $(self).parent().attr('id'),
+        successCallback
+    );
 }
 function hideAccessUpdated()
 {
@@ -118,29 +118,24 @@ function bindUpdateAccess()
 	// callback called when the ajax request Update the user permissions is successful
 	function successCallback (response)
 	{
-		piwikHelper.hideAjaxLoading();
-		// if the permission couldn't be granted
-		if(response.result == "error") 
-		{
-			piwikHelper.showAjaxError(response.message);
-		}
-		// if the permission change was successful
-		else
-		{
-			piwikHelper.hideAjaxError();
-			
-			$(self).parent().parent().find('.accessGranted')
-				.attr("src","plugins/UsersManager/images/no-access.png" )
-				.attr("class","updateAccess" )
-				.click(bindUpdateAccess)
-				;
-			$(self)
-				.attr('src',"plugins/UsersManager/images/ok.png" )
-				.attr('class',"accessGranted" )
-				;
-			$('#accessUpdated').css('display', 'inline-block');
-			hideAccessUpdated();
-		}
+        var mainDiv = $(self).parent().parent();
+        var login = $('#login', mainDiv).text();
+        mainDiv.find('.accessGranted')
+            .attr("src","plugins/UsersManager/images/no-access.png" )
+            .attr("class","updateAccess" )
+            .click(bindUpdateAccess)
+            ;
+        $(self)
+            .attr('src',"plugins/UsersManager/images/ok.png" )
+            .attr('class',"accessGranted" )
+            ;
+        $('#accessUpdated').css('display', 'inline-block');
+        hideAccessUpdated();
+
+        // reload if user anonymous was updated, since we display a Notice message when anon has view access
+        if(login == 'anonymous') {
+            window.location.reload();
+        }
 	}
 	
 	var idSite = getIdSites();
@@ -193,7 +188,7 @@ $(document).ready( function() {
 				.prepend( $('<input type="submit" class="submit updateuser"  value="'+_pk_translate('General_Save_js')+'" />')
 				.click( function(){ 
 					var onValidate = function() {
-						$.ajax( getUpdateUserAJAX( $('tr#'+idRow) ) ); 
+						sendUpdateUserAJAX($('tr#'+idRow));
 					};
 					if($('tr#'+idRow).find('input#password').val() != '-') {
 						piwikHelper.modalConfirm( '#confirmPasswordChange', {yes: onValidate});
@@ -216,7 +211,7 @@ $(document).ready( function() {
 			var idRow = $(this).attr('id');
 			var loginToDelete = $(this).parent().parent().find('#userLogin').html();
 			$('#confirmUserRemove h2').text(sprintf(_pk_translate('UsersManager_DeleteConfirm_js'),'"'+loginToDelete+'"'));
-			piwikHelper.modalConfirm( '#confirmUserRemove', {yes: function(){ $.ajax( getDeleteUserAJAX( loginToDelete ) ); }});
+			piwikHelper.modalConfirm( '#confirmUserRemove', {yes: function(){ sendDeleteUserAJAX( loginToDelete ); }});
 		}
 	);
 	
@@ -226,7 +221,7 @@ $(document).ready( function() {
 		
 		var numberOfRows = $('table#users')[0].rows.length;
 		var newRowId = numberOfRows + 1;
-		var newRowId = 'row' + newRowId;
+		newRowId = 'row' + newRowId;
 	
 		$(' <tr id="'+newRowId+'">\
 				<td><input id="useradd_login" value="login?" size="10" /></td>\
@@ -240,10 +235,23 @@ $(document).ready( function() {
 	  			.appendTo('#users')
 		;
 		$('#'+newRowId).keypress( submitOnEnter );
-		$('.adduser').click( function(){ $.ajax( getAddUserAJAX($('tr#'+newRowId)) ); } );
+		$('.adduser').click( function(){ sendAddUserAJAX($('tr#'+newRowId)); } );
 		$('.cancel').click(function() { piwikHelper.hideAjaxError(); $(this).parents('tr').remove();  $('.addrow').toggle(); });
 	});
 
 	$('.updateAccess')
 		.click( bindUpdateAccess );
+	
+	// when a site is selected, reload the page w/o showing the ajax loading element
+	$('#usersManagerSiteSelect').bind('piwik:siteSelected', function(e, site) {
+		if (site.id != piwik.idSite)
+		{
+			switchSite(
+				site.id,
+				site.name,
+				false /* do not show main ajax loading animation */,
+				true /* do not go to all websites dash */
+			);
+		}
+	});
 });

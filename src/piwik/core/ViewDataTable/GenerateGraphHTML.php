@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GenerateGraphHTML.php 6596 2012-07-30 20:01:36Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -91,6 +90,15 @@ abstract class Piwik_ViewDataTable_GenerateGraphHTML extends Piwik_ViewDataTable
 	public function showAllTicks()
 	{
 		$this->generateGraphDataParams['show_all_ticks'] = 1;
+	}
+	
+	/**
+	 * Adds a row to the report containing totals for contained metrics. Mainly useful
+	 * for evolution graphs where displaying the totals w/ the metrics is useful.
+	 */
+	public function addTotalRow()
+	{
+		$this->generateGraphDataParams['add_total_row'] = 1;
 	}
 	
 	/**

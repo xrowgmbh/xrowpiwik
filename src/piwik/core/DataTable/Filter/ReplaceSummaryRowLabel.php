@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ReplaceSummaryRowLabel.php 6966 2012-09-10 15:42:12Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik

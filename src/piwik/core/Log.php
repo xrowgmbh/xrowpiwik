@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Log.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -53,7 +52,7 @@ abstract class Piwik_Log extends Zend_Log
 	{
 		Piwik_Common::mkdir(dirname($this->logToFileFilename));
 		$writerFile = new Zend_Log_Writer_Stream($this->logToFileFilename);
-		$writerFile->setFormatter( $this->screenFormatter );
+		$writerFile->setFormatter( $this->fileFormatter );
 		$this->addWriter($writerFile);
 	}
 	

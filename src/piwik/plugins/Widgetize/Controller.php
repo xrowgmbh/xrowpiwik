@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6266 2012-05-16 21:22:18Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Widgetize

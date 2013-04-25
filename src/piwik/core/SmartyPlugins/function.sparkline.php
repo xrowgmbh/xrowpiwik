@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: function.sparkline.php 6520 2012-07-19 07:08:35Z capedfuzz $
  * 
  * @category Piwik
  * @package SmartyPlugins

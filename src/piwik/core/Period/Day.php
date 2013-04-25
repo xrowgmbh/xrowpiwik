@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Day.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -83,7 +82,7 @@ class Piwik_Period_Day extends Piwik_Period
 	 * Returns the day of the period in the given format
 	 *
 	 * @param string $format
-	 * @return array
+	 * @return string
 	 */
 	public function toString($format = "Y-m-d")
 	{
@@ -93,7 +92,7 @@ class Piwik_Period_Day extends Piwik_Period
 	/**
 	 * Returns the current period as a string
 	 *
-	 * @return array
+	 * @return string
 	 */
 	public function __toString()
 	{

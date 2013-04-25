@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Myisam.php 6792 2012-08-16 13:59:58Z EZdesign $
  *
  * @category Piwik
  * @package Piwik
@@ -28,7 +27,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	{
 		$db = Zend_Registry::get('db');
 		$allEngines = $db->fetchAssoc('SHOW ENGINES');
-		if(key_exists($engineName, $allEngines))
+		if(array_key_exists($engineName, $allEngines))
 		{
 			$support = $allEngines[$engineName]['Support'];
 			return $support == 'DEFAULT' || $support == 'YES';
@@ -82,11 +81,16 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 						  main_url VARCHAR(255) NOT NULL,
   						  ts_created TIMESTAMP NULL,
   						  ecommerce TINYINT DEFAULT 0,
+  						  sitesearch TINYINT DEFAULT 1,
+  						  sitesearch_keyword_parameters TEXT NOT NULL,
+  						  sitesearch_category_parameters TEXT NOT NULL,
   						  timezone VARCHAR( 50 ) NOT NULL,
   						  currency CHAR( 3 ) NOT NULL,
   						  excluded_ips TEXT NOT NULL,
   						  excluded_parameters TEXT NOT NULL,
+  						  excluded_user_agents TEXT NOT NULL,
   						  `group` VARCHAR(250) NOT NULL, 
+  						  keep_url_fragment TINYINT NOT NULL DEFAULT 0,
 						  PRIMARY KEY(idsite)
 						)  DEFAULT CHARSET=utf8
 			",
@@ -182,11 +186,12 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 							  visitor_days_since_first SMALLINT(5) UNSIGNED NOT NULL,
 							  visit_first_action_time DATETIME NOT NULL,
 							  visit_last_action_time DATETIME NOT NULL,
-							  visit_exit_idaction_url INTEGER(11) UNSIGNED NOT NULL,
+							  visit_exit_idaction_url INTEGER(11) UNSIGNED NULL DEFAULT 0,
 							  visit_exit_idaction_name INTEGER(11) UNSIGNED NOT NULL,
 							  visit_entry_idaction_url INTEGER(11) UNSIGNED NOT NULL,
 							  visit_entry_idaction_name INTEGER(11) UNSIGNED NOT NULL,
 							  visit_total_actions SMALLINT(5) UNSIGNED NOT NULL,
+							  visit_total_searches SMALLINT(5) UNSIGNED NOT NULL,
 							  visit_total_time SMALLINT(5) UNSIGNED NOT NULL,
 							  visit_goal_converted TINYINT(1) NOT NULL,
 							  visit_goal_buyer TINYINT(1) NOT NULL, 
@@ -212,7 +217,10 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 							  location_ip VARBINARY(16) NOT NULL,
 							  location_browser_lang VARCHAR(20) NOT NULL,
 							  location_country CHAR(3) NOT NULL,
-							  location_continent CHAR(3) NOT NULL,
+							  location_region char(2) DEFAULT NULL,
+							  location_city varchar(255) DEFAULT NULL,
+							  location_latitude float(10, 6) DEFAULT NULL,
+							  location_longitude float(10, 6) DEFAULT NULL,
 							  custom_var_k1 VARCHAR(200) DEFAULT NULL,
 							  custom_var_v1 VARCHAR(200) DEFAULT NULL,
 							  custom_var_k2 VARCHAR(200) DEFAULT NULL,
@@ -269,7 +277,10 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
         							  visitor_days_since_first SMALLINT(5) UNSIGNED NOT NULL,
 							  		  visitor_days_since_order SMALLINT(5) UNSIGNED NOT NULL,
 									  location_country char(3) NOT NULL,
-									  location_continent char(3) NOT NULL,
+									  location_region char(2) DEFAULT NULL,
+									  location_city varchar(255) DEFAULT NULL,
+									  location_latitude float(10, 6) DEFAULT NULL,
+									  location_longitude float(10, 6) DEFAULT NULL,
 									  url text NOT NULL,
 									  idgoal int(10) NOT NULL,
 									  buster int unsigned NOT NULL,
@@ -304,8 +315,8 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 									  		  idvisitor BINARY(8) NOT NULL,
 									          server_time DATETIME NOT NULL,
 											  idvisit INTEGER(10) UNSIGNED NOT NULL,
-											  idaction_url INTEGER(10) UNSIGNED NOT NULL,
-											  idaction_url_ref INTEGER(10) UNSIGNED NOT NULL,
+											  idaction_url INTEGER(10) UNSIGNED DEFAULT NULL,
+											  idaction_url_ref INTEGER(10) UNSIGNED NULL DEFAULT 0,
 											  idaction_name INTEGER(10) UNSIGNED,
 											  idaction_name_ref INTEGER(10) UNSIGNED NOT NULL,
 											  time_spent_ref_action INTEGER(10) UNSIGNED NOT NULL,

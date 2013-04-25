@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleRssWidget.php 6769 2012-08-15 13:56:23Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleRssWidget
@@ -35,7 +34,10 @@ class Piwik_ExampleRssWidget extends Piwik_Plugin
 	
 	public function getListHooksRegistered()
 	{
-		return array( 'AssetManager.getCssFiles' => 'getCssFiles');
+		return array(
+            'AssetManager.getCssFiles' => 'getCssFiles',
+            'WidgetsList.add' => 'addWidgets'
+        );
 	}
 
 	/**
@@ -46,11 +48,15 @@ class Piwik_ExampleRssWidget extends Piwik_Plugin
 		$cssFiles = &$notification->getNotificationObject();
 		
 		$cssFiles[] = "plugins/ExampleRssWidget/templates/styles.css";
-	}	
+	}
+
+    public function addWidgets()
+    {
+        Piwik_AddWidget('Example Widgets', 'Piwik.org Blog', 'ExampleRssWidget', 'rssPiwik');
+        Piwik_AddWidget('Example Widgets', 'Piwik Changelog', 'ExampleRssWidget', 'rssChangelog');
+    }
 }
 
-Piwik_AddWidget('Example Widgets', 'Piwik.org Blog', 'ExampleRssWidget', 'rssPiwik');
-Piwik_AddWidget('Example Widgets', 'Piwik Changelog', 'ExampleRssWidget', 'rssChangelog');
 
 /**
  *

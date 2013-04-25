@@ -4,11 +4,9 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: piwik.php 6859 2012-08-22 09:04:47Z matt $
  *
  * @package Piwik
  */
-umask(0);
 $GLOBALS['PIWIK_TRACKER_DEBUG'] = false;
 $GLOBALS['PIWIK_TRACKER_DEBUG_FORCE_SCHEDULED_TASKS'] = false;
 define('PIWIK_ENABLE_TRACKING', true);
@@ -44,6 +42,8 @@ require_once PIWIK_INCLUDE_PATH .'/core/Common.php';
 require_once PIWIK_INCLUDE_PATH .'/core/IP.php';
 require_once PIWIK_INCLUDE_PATH .'/core/Tracker.php';
 require_once PIWIK_INCLUDE_PATH .'/core/Config.php';
+require_once PIWIK_INCLUDE_PATH .'/core/Translate.php';
+require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Cache.php';
 require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Db.php';
 require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Db/Exception.php';
 require_once PIWIK_INCLUDE_PATH .'/core/Tracker/IgnoreCookie.php';

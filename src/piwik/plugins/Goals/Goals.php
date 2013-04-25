@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Goals.php 6918 2012-09-04 21:44:26Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_Goals
@@ -810,7 +809,11 @@ class Piwik_Goals extends Piwik_Plugin
 						continue;
 					}
 					// Product Name/Category not defined"
-					$label = Piwik_CustomVariables::LABEL_CUSTOM_VALUE_NOT_DEFINED;
+					if(class_exists('Piwik_CustomVariables')) {
+						$label = Piwik_CustomVariables::LABEL_CUSTOM_VALUE_NOT_DEFINED;
+					} else {
+						$label = "Value not defined";
+					}
 				}
 				// For carts, idorder = 0. To count abandoned carts, we must count visits with an abandoned cart
 				if($ecommerceType == Piwik_Tracker_GoalManager::IDGOAL_CART)

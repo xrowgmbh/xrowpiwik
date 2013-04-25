@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ReportRenderer.php 6918 2012-09-04 21:44:26Z JulienM $
  * 
  * @category Piwik
  * @package Piwik

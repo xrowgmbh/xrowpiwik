@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: BeautifyTimeRangeLabels.php 6660 2012-08-03 02:24:30Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik

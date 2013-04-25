@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Config.php 5951 2012-03-04 22:04:41Z vipsoft $
  *
  * @category Piwik
  * @package Piwik
@@ -12,6 +11,10 @@
 
 /**
  * Backward compatibility layer
+ * DO NOT USE
+ *
+ * Use this notation to fetch a config file value:
+ * 	Piwik_Config::getInstance()->General['enable_browser_archiving_triggering']
  *
  * @todo remove this in 2.0
  * @since 1.7

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: SafeDecodeLabel.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -34,12 +33,24 @@ class Piwik_DataTable_Filter_SafeDecodeLabel extends Piwik_DataTable_Filter
 	 * @param string  $value
 	 * @return mixed|string
 	 */
-	static public function filterValue($value)
+	static public function safeDecodeLabel($value)
 	{
-		$value = htmlspecialchars_decode( urldecode($value), ENT_QUOTES);
+		if(empty($value)) {
+			return $value;
+		}
+		$raw = urldecode($value);
+		$value = htmlspecialchars_decode($raw , ENT_QUOTES);
 		if(self::$outputHtml)
 		{
-			$value = htmlspecialchars($value, ENT_QUOTES);
+			// Pre 5.3
+			if(!defined('ENT_IGNORE')) {
+				$style = ENT_QUOTES;
+			} else {
+				$style = ENT_QUOTES | ENT_IGNORE;
+			}
+			// See changes in 5.4: http://nikic.github.com/2012/01/28/htmlspecialchars-improvements-in-PHP-5-4.html
+			// Note: at some point we should change ENT_IGNORE to ENT_SUBSTITUTE
+			$value = htmlspecialchars($value, $style, 'UTF-8');
 		}
 		return $value;
 	}
@@ -56,7 +67,7 @@ class Piwik_DataTable_Filter_SafeDecodeLabel extends Piwik_DataTable_Filter
 			$value = $row->getColumn($this->columnToDecode);
 			if($value !== false)
 			{
-				$value = self::filterValue($value);
+				$value = self::safeDecodeLabel($value);
 				$row->setColumn($this->columnToDecode,$value);
 				
 				$this->filterSubTable($row);

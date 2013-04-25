@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: HtmlTable.php 6843 2012-08-20 11:01:47Z EZdesign $
  *
  * @category Piwik
  * @package Piwik
@@ -82,6 +81,8 @@ class Piwik_ViewDataTable_HtmlTable extends Piwik_ViewDataTable
 		} catch(Piwik_Access_NoAccessException $e) {
 			throw $e;
 		} catch(Exception $e) {
+			Piwik::log("Failed to get data from API: ".$e->getMessage());
+			
 			$this->isDataAvailable = false;
 		}
 
@@ -189,7 +190,8 @@ class Piwik_ViewDataTable_HtmlTable extends Piwik_ViewDataTable
 	protected function getRequestString()
 	{
 		$requestString = parent::getRequestString();
-		if($this->recursiveDataTableLoad)
+		if ($this->recursiveDataTableLoad
+			&& !Piwik_Common::getRequestVar('flat', false))
 		{
 			$requestString .= '&expanded=1';
 		}
@@ -225,4 +227,13 @@ class Piwik_ViewDataTable_HtmlTable extends Piwik_ViewDataTable
 	{
 		$this->variablesDefault['disable_row_evolution'] = true;
 	}
+	
+	/**
+	 * Disables row actions.
+	 */
+	public function disableRowActions()
+	{
+		$this->variablesDefault['disable_row_actions'] = true;
+	}
+	
 }

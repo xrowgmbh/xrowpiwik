@@ -39,29 +39,34 @@ $(document).ready(function() {
 		}
 		
 		$('#deleteDataEstimate').hide();
-		$('#deleteDataEstimateSect .loadingPiwik').show();
-		
-		var data = $('#formDeleteSettings').serialize();
+
+		var data = $('#formDeleteSettings').serializeArray();
+        var formData = {};
+        for(var i=0; i<data.length; i++) {
+            formData[data[i].name] = data[i].value;
+        }
 		if (forceEstimate === true) {
-			data += '&forceEstimate=1';
+            formData['forceEstimate'] = 1;
 		}
-		
-		currentRequest = $.ajax({
-			type: 'GET',
-			url: 'index.php?module=PrivacyManager&action=getDatabaseSize',
-			dataType: 'html',
-			async: true,
-			error: piwikHelper.ajaxHandleError,		// Callback when the request fails
-			data: data,
-			success: function(data) {
-				currentRequest = undefined;
-				$('#deleteDataEstimateSect .loadingPiwik').hide();
-				$('#deleteDataEstimate').html(data).show();
-				
-				// lock size of db size estimate
-				$('#deleteDataEstimateSect').height($('#deleteDataEstimateSect').height());
-			}
-		});
+
+        currentRequest = new ajaxHelper();
+        currentRequest.setLoadingElement('#deleteDataEstimateSect .loadingPiwik');
+        currentRequest.addParams({
+            module: 'PrivacyManager',
+            action: 'getDatabaseSize'
+        }, 'get');
+        currentRequest.addParams(formData, 'post');
+        currentRequest.setCallback(
+            function (data) {
+                currentRequest = undefined;
+                $('#deleteDataEstimate').html(data).show();
+
+                // lock size of db size estimate
+                $('#deleteDataEstimateSect').height($('#deleteDataEstimateSect').height());
+            }
+        );
+        currentRequest.setFormat('html');
+        currentRequest.send(false);
 	}
 	
 	// make sure certain sections only display if their corresponding features are enabled
@@ -161,34 +166,32 @@ $(document).ready(function() {
 		piwikHelper.modalConfirm('#confirmPurgeNow', {
 			yes: function() {
 				$(link).hide();
-				$('#deleteSchedulingSettings .loadingPiwik').show();
-		
+
 				// execute a data purge
-				$.ajax({
-					type: 'POST',
-					url: 'index.php',
-					data: {
-					  module: 'PrivacyManager',
-					  action: 'executeDataPurge',
-					  token_auth: piwik.token_auth
-					},
-					async: true,
-					error: piwikHelper.ajaxHandleError,		// Callback when the request fails
-					success: function() {
-						$('#deleteSchedulingSettings .loadingPiwik').hide();
-						
-						// force reload
-						$('#deleteDataEstimate').html('');
-						reloadDbStats();
-						
-						// show 'db purged' message
-						$('#db-purged-message').fadeIn('slow');
-						setTimeout( function(){
-							// hide 'db purged' message & show link
-							$('#db-purged-message').fadeOut('slow', function(){ $(link).show(); });
-						}, 2000);
-					}
-				});
+                var ajaxRequest = new ajaxHelper();
+                ajaxRequest.setLoadingElement('#deleteSchedulingSettings .loadingPiwik');
+                ajaxRequest.addParams({
+                    module: 'PrivacyManager',
+                    action: 'executeDataPurge'
+                }, 'get');
+                ajaxRequest.setCallback(
+                    function () {
+                        // force reload
+                        $('#deleteDataEstimate').html('');
+                        reloadDbStats();
+
+                        // show 'db purged' message
+                        $('#db-purged-message').fadeIn('slow');
+                        setTimeout(function () {
+                            // hide 'db purged' message & show link
+                            $('#db-purged-message').fadeOut('slow', function () {
+                                $(link).show();
+                            });
+                        }, 2000);
+                    }
+                );
+                ajaxRequest.setFormat('html');
+                ajaxRequest.send(false);
 			}
 		});
 	});

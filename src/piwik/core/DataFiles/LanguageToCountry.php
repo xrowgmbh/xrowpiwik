@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: LanguageToCountry.php 5802 2012-02-11 08:39:46Z matt $
  * 
  * @category Piwik
  * @package DataFiles

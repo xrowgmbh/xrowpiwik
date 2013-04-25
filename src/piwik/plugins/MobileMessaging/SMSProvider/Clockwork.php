@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Clockwork.php 6727 2012-08-13 20:26:46Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_MobileMessaging_SMSProvider

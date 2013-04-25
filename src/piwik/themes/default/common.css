@@ -28,6 +28,12 @@ blockquote,q {
 label {
 	cursor:pointer;
 }
+
+/* IE < 9 will use this */
+html.old-ie .ie-hide { 
+	display: none; 
+}
+
 /* remember to define focus styles! */
 :focus {
 	outline: 0;
@@ -89,7 +95,7 @@ a {
 .top_controls{ 
 	position:relative; 
 	height:32px;
-	.z-index:11;
+	.z-index:9999;
 }
 
 .top_controls_inner{ 
@@ -110,7 +116,7 @@ a {
 	-webkit-border-radius:4px;
 	float:left; 
 	margin-right:12px;
-	z-index:11;
+	z-index:999;
 	position:absolute;
 }
 #periodString:hover {
@@ -157,6 +163,9 @@ a {
 	display:inline-block; 
 	padding: 2px 0 3px 0;
 	vertical-align:top; 
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
 }
 #periodString label.selected-period-label {
 	text-decoration: underline;
@@ -186,9 +195,9 @@ a {
 #header_message .header_short{ display:block; white-space:nowrap;  }
 #header_message .header_full{ display:none; }
 #header_message:hover .header_short,
-#header_message:active .header_short { display:none; } 
+#header_message.active .header_short { display:none; } 
 #header_message:hover .header_full,
-#header_message:hover .header_full { display:block; }
+#header_message.active .header_full { display:block; }
 
 .header_full {
 	padding-bottom:5px;
@@ -230,6 +239,7 @@ a {
 	position:absolute; 
 	top:65px; 
 	right:0;
+	z-index:20;
 }
 .top_bar_sites_selector>label{
 	display:inline-block; 
@@ -340,7 +350,7 @@ a {
 .custom_select_block_show{ height:auto; overflow:visible;padding-top:5px;  }
 
 
-#siteSelect a {
+.siteSelect a {
     white-space:normal;
     text-align:left;
 }
@@ -444,9 +454,13 @@ a {
 	-moz-border-radius:3px;
 	-webkit-border-radius:3px;
 }
-/* extending the jquery UI css for inline help */
-.ui-widget { 
-	text-align:justify;
+/* extending the jquery UI css, for visitor Log popover */
+.ui-widget .dataTable {
+    font-size: 14px;
+}
+/* for inline help */
+.ui-widget {
+    text-align:justify;
 }
 
 .ui-inline-help {
@@ -605,6 +619,7 @@ select {
 	background:#847b6d url(images/dashboard_h_bg_hover.png) repeat-x 0 0;
 	float:right; 
 	margin:12px 0 10px 0;
+	cursor:pointer;
 }
 /* on admin screen, Save button aligned on the left */
 .admin .submit {
@@ -727,10 +742,58 @@ table.entityTable tr td a {
 	-moz-box-shadow: 1px 1px 2px #666;
 	-webkit-box-shadow: 1px 1px 2px #666;
 	box-shadow: 1px 1px 2px #666;
-	white-space: nowrap;
+	overflow: hidden;
 }
 
 .piwik-tooltip .tip-title {
 	font-weight: bold;
 	color: #7E7363;
+}
+
+
+
+/* Popover */
+
+.ui-dialog .ui-widget-header {
+	background: none; 
+	border: 0; 
+	font: bold 18px Arial, Helvetica, sans-serif; 
+	color: #7e7363;	
+	clear: both;
+}
+
+.ui-dialog-titlebar-help {
+	position: absolute;
+	right: 33px;
+	top: 50%;
+	width: 16px;
+	margin: -8px 0 0 0;
+	padding: 0;
+	height: 16px;
+	background: url(images/help.png);
+	overflow: hidden;
+}
+
+.section-toggler-link {
+	font-size:.8em;
+	font-style:italic;
+	text-decoration:none;
+}
+.section-toggler-link:hover {
+	text-decoration:underline;
+}
+
+.metricEvolution {
+    display:inline-block;
+    font-size:9pt;
+    opacity:0.75;
+}
+
+.reportsByDimensionView > .entityList {
+	float: left;
+	width: 220px; 
+	min-height:450px;
+}
+.dimensionCategory {
+	margin-top:10px;
 }

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: functions.php 6362 2012-05-29 05:17:56Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UserSettings
@@ -260,3 +259,27 @@ function Piwik_UserSettings_getBrowserFromBrowserVersion( $browserWithVersion )
 	return $matches[1];
 }
 
+/**
+ * Returns the given language code to translated language name
+ *
+ * @param $label
+ *
+ * @return string
+ */
+function Piwik_LanguageTranslate($label)
+{
+    if ($label == '' || $label == 'xx') {
+        return Piwik_Translate('General_Unknown');
+    }
+
+    $key = 'UserLanguage_Language_' . $label;
+
+    $translation = Piwik_Translate($key);
+
+    // Show language code if unknown code
+    if ($translation == $key) {
+        $translation = Piwik_Translate('TranslationsAdmin_LanguageCode') . ' ' . $label;
+    }
+
+    return $translation;
+}

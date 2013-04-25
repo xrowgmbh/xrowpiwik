@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DoNotTrack.php 6375 2012-05-29 10:52:39Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_DoNotTrack
@@ -29,7 +28,7 @@ class Piwik_DoNotTrack extends Piwik_Plugin
 	public function getInformation()
 	{
 		return array(
-			'description' => 'Ignore visits with X-Do-Not-Track or DNT header',
+			'description' => Piwik_Translate('DoNotTrack_PluginDescription'),
 			'author' => 'Piwik',
 			'author_homepage' => 'http://piwik.org/',
 			'version' => Piwik_Version::VERSION,
@@ -53,6 +52,13 @@ class Piwik_DoNotTrack extends Piwik_Plugin
 		if((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')
 			|| (isset($_SERVER['HTTP_DNT']) && substr($_SERVER['HTTP_DNT'], 0, 1) === '1'))
 		{
+			$ua = Piwik_Tracker_Visit::getUserAgent($_REQUEST);
+			if(strpos($ua, 'MSIE 10') !== false)
+			{
+				printDebug("INTERNET EXPLORER 10 Enables DNT by default, so Piwik ignores DNT for all IE10 browsers...");
+				return;
+			}
+
 			$exclude =& $notification->getNotificationObject();
 			$exclude = true;
 			printDebug("DoNotTrack found.");

@@ -1,5 +1,8 @@
 #!/bin/sh -e
 
+# DO NOT USE: Use archive.php instead.
+# SEE DOCS: http://piwik.org/setup-auto-archiving/
+# =======================================================================
 # Description
 # This cron script will automatically run Piwik archiving every hour.
 # The script will also run scheduled tasks configured within piwik using
@@ -67,7 +70,6 @@ SEGMENTS_TO_ARCHIVE=`$CMD_GET_SEGMENTS_TO_ARCHIVE`
 
 echo "Starting Piwik reports archiving..."
 echo ""
-
 for idsite in $ID_SITES; do
   TEST_IS_NUMERIC=`echo $idsite | egrep '^[0-9]+$'`
   if test -n "$TEST_IS_NUMERIC"; then

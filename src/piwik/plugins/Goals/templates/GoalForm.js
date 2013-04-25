@@ -90,8 +90,7 @@ function bindGoalForm()
 	
 	$('#goal_submit').click( function() {
 		// prepare ajax query to API to add goal
-		ajaxRequestAddGoal = getAjaxAddGoal();
-		$.ajax( ajaxRequestAddGoal );
+        ajaxAddGoal();
 		return false;
 	});
 	
@@ -101,53 +100,54 @@ function bindGoalForm()
 	} );
 }
 
-function getAjaxDeleteGoal(idGoal)
+function ajaxDeleteGoal(idGoal)
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf('goalAjaxLoading');
-	piwikHelper.lazyScrollTo(".entityContainer", 400);
-	
-	var parameters = {};
-	parameters.idSite = piwik.idSite;
-	parameters.idGoal =  idGoal;
-	parameters.method =  'Goals.deleteGoal';
-	parameters.module = 'API';
-	parameters.format = 'json';
-	parameters.token_auth = piwik.token_auth;
-	ajaxRequest.data = parameters;
-	return ajaxRequest;
+    piwikHelper.lazyScrollTo(".entityContainer", 400);
+
+    var parameters = {};
+    parameters.format = 'json';
+    parameters.idGoal = idGoal;
+    parameters.module = 'API';
+    parameters.method = 'Goals.deleteGoal';
+
+    var ajaxRequest = new ajaxHelper();
+    ajaxRequest.addParams(parameters, 'get');
+    ajaxRequest.setLoadingElement('#goalAjaxLoading');
+    ajaxRequest.setCallback(function(){ location.reload(); });
+    ajaxRequest.send(true);
 }
 
-function getAjaxAddGoal()
+function ajaxAddGoal()
 {
-	var ajaxRequest = piwikHelper.getStandardAjaxConf('goalAjaxLoading');
-	piwikHelper.lazyScrollTo(".entityContainer", 400);
-	var parameters = {};
-	
-	parameters.idSite = piwik.idSite;
-	parameters.name = encodeURIComponent( $('#goal_name').val() );
-	
-	if($('[name=trigger_type]').val() == 'manually') {
-		parameters.matchAttribute = 'manually';
-		parameters.patternType = 'regex';
-		parameters.pattern = '.*';
-		parameters.caseSensitive = 0;
-	} else {
-		parameters.matchAttribute = $('input[name=match_attribute]:checked').val();
-		parameters.patternType = $('[name=pattern_type]').val();
-		parameters.pattern = encodeURIComponent( $('input[name=pattern]').val() );
-		parameters.caseSensitive = $('#case_sensitive').prop('checked') == true ? 1: 0;
-	}
-	parameters.revenue = $('input[name=revenue]').val();
-	parameters.allowMultipleConversionsPerVisit = $('input[name=allow_multiple]:checked').val() == true ? 1: 0;
-	
-	parameters.idGoal =  $('input[name=goalIdUpdate]').val();
-	parameters.method =  $('input[name=methodGoalAPI]').val();
-	parameters.module = 'API';
-	parameters.format = 'json';
-	parameters.token_auth = piwik.token_auth;
-	
-	ajaxRequest.data = parameters;
-	return ajaxRequest;
+    piwikHelper.lazyScrollTo(".entityContainer", 400);
+
+    var parameters = {};
+    parameters.name = encodeURIComponent( $('#goal_name').val() );
+
+    if($('[name=trigger_type]').val() == 'manually') {
+        parameters.matchAttribute = 'manually';
+        parameters.patternType = 'regex';
+        parameters.pattern = '.*';
+        parameters.caseSensitive = 0;
+    } else {
+        parameters.matchAttribute = $('input[name=match_attribute]:checked').val();
+        parameters.patternType = $('[name=pattern_type]').val();
+        parameters.pattern = encodeURIComponent( $('input[name=pattern]').val() );
+        parameters.caseSensitive = $('#case_sensitive').prop('checked') == true ? 1: 0;
+    }
+    parameters.revenue = $('input[name=revenue]').val();
+    parameters.allowMultipleConversionsPerVisit = $('input[name=allow_multiple]:checked').val() == true ? 1: 0;
+
+    parameters.idGoal =  $('input[name=goalIdUpdate]').val();
+    parameters.format = 'json';
+    parameters.module = 'API';
+    parameters.method = $('input[name=methodGoalAPI]').val();
+
+    var ajaxRequest = new ajaxHelper();
+    ajaxRequest.addParams(parameters, 'get');
+    ajaxRequest.setLoadingElement('#goalAjaxLoading');
+    ajaxRequest.setCallback(function(){ location.reload(); });
+    ajaxRequest.send(true);
 }
 
 function bindListGoalEdit()
@@ -166,7 +166,7 @@ function bindListGoalEdit()
 		
 		$('#confirm h2').text(sprintf(_pk_translate('Goals_DeleteGoalConfirm_js'), '"'+goal.name+'"'));
 		piwikHelper.modalConfirm('#confirm', {yes: function(){
-		    $.ajax( getAjaxDeleteGoal( goalId ) );
+            ajaxDeleteGoal( goalId );
 		}});
 		return false;
 	});

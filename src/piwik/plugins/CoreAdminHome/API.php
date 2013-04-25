@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6959 2012-09-10 07:37:01Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -69,11 +68,12 @@ class Piwik_CoreAdminHome_API
 	 */
 	public function invalidateArchivedReports($idSites, $dates)
 	{
-		Piwik::checkUserIsSuperUser();
 		$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
 		if(empty($idSites)) {
-			throw new Exception("Specify a value for &idSites=");
+			throw new Exception("Specify a value for &idSites= as a comma separated list of website IDs, for which your token_auth has 'admin' permission");
 		}
+		Piwik::checkUserHasAdminAccess($idSites);
+
 		// Ensure the specified dates are valid
 		$toInvalidate = $invalidDates = array();
 		$dates = explode(',', $dates);
@@ -222,7 +222,7 @@ class Piwik_CoreAdminHome_API
 	 */
 	static public function getWebsiteIdsToInvalidate()
 	{
-		Piwik::checkUserIsSuperUser();
+		Piwik::checkUserHasSomeAdminAccess();
 		$invalidatedIdSites = Piwik_GetOption(self::OPTION_INVALIDATED_IDSITES);
 		if($invalidatedIdSites 
 			&& ($invalidatedIdSites = unserialize($invalidatedIdSites))

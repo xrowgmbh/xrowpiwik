@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleUI.php 3865 2011-02-11 20:17:47Z JulienM $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleUI

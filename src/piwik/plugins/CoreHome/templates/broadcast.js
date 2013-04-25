@@ -27,6 +27,31 @@ var broadcast = {
      */
     _isInit: false,
 
+	/**
+	 * Last known hash url without popover parameter
+	 */
+	currentHashUrl: false,
+
+	/**
+	 * Last known popover parameter
+	 */
+	currentPopoverParameter: false,
+	
+	/**
+	 * Callbacks for popover parameter change
+	 */
+	popoverHandlers: [],
+
+	/**
+	 * Force reload once
+	 */
+	forceReload: false,
+
+    /**
+     * Suppress content update on hash changing
+     */
+    updateHashOnly: false,
+
     /**
      * Initializes broadcast object
      * @return {void}
@@ -50,29 +75,84 @@ var broadcast = {
      * 1. after calling $.history.init();
      * 2. after calling $.history.load();  //look at broadcast.changeParameter();
      * 3. after pushing "Go Back" button of a browser
+	 * 
+	 * * Note: the method is manipulated in Overlay/templates/index.js - keep this in mind when making changes.
      *
      * @param {string}  hash to load page with
      * @return {void}
      */
     pageload: function( hash )
     {
-        broadcast.init();
+		broadcast.init();
 
         // Unbind any previously attached resize handlers
         $(window).off('resize');
 
-        // hash doesn't contain the first # character.
-        if( hash ) {
-            // restore ajax loaded state
-            broadcast.loadAjaxContent(hash);
-
-            // Hack: make sure the "Widgets & Dashboard" is deleted on reload
-            $('#dashboardSettings').remove();
-            $('#dashboardWidgetsArea').dashboard('destroy');
-        } else {
-            // start page
-            $('#content').empty();
+        // do not update content if it should be suppressed
+        if (broadcast.updateHashOnly) {
+            broadcast.updateHashOnly = false;
+            return;
         }
+			
+		// hash doesn't contain the first # character.
+		if( hash ) {
+			
+			var hashParts = hash.split('&popover=');
+			var hashUrl = hashParts[0];
+			var popoverParam = '';
+			if (hashParts.length > 1) {
+				popoverParam = hashParts[1];
+				// in case the $ was encoded (e.g. when using copy&paste on urls in some browsers) 
+				popoverParam = decodeURIComponent(popoverParam);
+				// revert special encoding from broadcast.propagateNewPopoverParameter()
+				popoverParam = popoverParam.replace(/\$/g, '%');
+				popoverParam = decodeURIComponent(popoverParam);
+			}
+			
+			var pageUrlUpdated = (popoverParam == '' ||
+				(broadcast.currentHashUrl !== false && broadcast.currentHashUrl != hashUrl));
+			
+			var popoverParamUpdated = (popoverParam != '' && hashUrl == broadcast.currentHashUrl);
+			
+			if (broadcast.currentHashUrl === false) {
+				// new page load
+				pageUrlUpdated = true;
+				popoverParamUpdated = (popoverParam != '');
+			}
+			
+			if (pageUrlUpdated || broadcast.forceReload) {
+				Piwik_Popover.close();
+				
+				if (hashUrl != broadcast.currentHashUrl || broadcast.forceReload) {
+					// restore ajax loaded state
+					broadcast.loadAjaxContent(hashUrl);
+		
+					// make sure the "Widgets & Dashboard" is deleted on reload
+					$('#dashboardSettings').remove();
+					$('#dashboardWidgetsArea').dashboard('destroy');
+				}
+			}
+			
+			broadcast.forceReload = false;
+			broadcast.currentHashUrl = hashUrl;
+			broadcast.currentPopoverParameter = popoverParam;
+			
+			if (popoverParamUpdated && popoverParam == '') {
+				Piwik_Popover.close();
+			} else if (popoverParamUpdated) {
+				var popoverParamParts = popoverParam.split(':');
+				var handlerName = popoverParamParts[0];
+				popoverParamParts.shift();
+				var param = popoverParamParts.join(':');
+				if (typeof broadcast.popoverHandlers[handlerName] != 'undefined') {
+					broadcast.popoverHandlers[handlerName](param);
+				}
+			}
+			
+		} else {
+			// start page
+			$('#content').empty();
+		}
     },
 
     /**
@@ -86,20 +166,21 @@ var broadcast = {
      * NOTE: this method will only make ajax call and replacing main content.
      *
      * @param {string} ajaxUrl  querystring with parameters to be updated
+	 * @param {boolean} disableHistory  the hash change won't be available in the browser history
      * @return {void}
      */
-    propagateAjax: function (ajaxUrl)
+    propagateAjax: function (ajaxUrl, disableHistory)
     {
         broadcast.init();
 
         // abort all existing ajax requests
-        piwikHelper.abortQueueAjax();
+        globalAjaxQueue.abort();
 
         // available in global scope
         var currentHashStr = broadcast.getHash();
 
-        ajaxUrl = ajaxUrl.replace(/^\?|&#/,'');
-
+		ajaxUrl = ajaxUrl.replace(/^\?|&#/,'');
+		
         var params_vals = ajaxUrl.split("&");
         for( var i=0; i<params_vals.length; i++ )
         {
@@ -119,8 +200,19 @@ var broadcast = {
         {
             currentHashStr = broadcast.updateParamValue('idDashboard=', currentHashStr);
         }
-        // Let history know about this new Hash and load it.
-        $.history.load(currentHashStr);
+		
+		if (disableHistory)
+		{
+			var newLocation = window.location.href.split('#')[0] + '#' + currentHashStr;
+			// window.location.replace changes the current url without pushing it on the browser's history stack
+			window.location.replace(newLocation);
+		}
+		else
+		{
+			// Let history know about this new Hash and load it.
+			broadcast.forceReload = true;
+			$.history.load(currentHashStr);
+		}
     },
 
     /**
@@ -149,7 +241,7 @@ var broadcast = {
     propagateNewPage: function (str, showAjaxLoading)
     {
         // abort all existing ajax requests
-        piwikHelper.abortQueueAjax();
+        globalAjaxQueue.abort();
 		
 		if (typeof showAjaxLoading === 'undefined' || showAjaxLoading)
 		{
@@ -178,6 +270,7 @@ var broadcast = {
         if(oldUrl == newUrl) {
             window.location.reload();
         } else {
+			this.forceReload = true;
             window.location.href = newUrl;
         }
         return false;
@@ -217,6 +310,8 @@ var broadcast = {
         }
         if( valFromUrl != '') {
             // replacing current param=value to newParamValue;
+			valFromUrl = valFromUrl.replace(/\$/g, '\\$');
+			valFromUrl = valFromUrl.replace(/\./g, '\\.');
             var regToBeReplace = new RegExp(paramName + '=' + valFromUrl, 'ig');
             if(newParamValue == '') {
                 // if new value is empty remove leading &, aswell
@@ -230,8 +325,40 @@ var broadcast = {
         return urlStr;
     },
 
+	/**
+	 * Update the part after the second hash
+	 */
+	propagateNewPopoverParameter: function(handlerName, value)
+	{
+		var hash = broadcast.getHashFromUrl(window.location.href);
+		var hashParts = hash.split('&popover=');
+		
+		var newHash = hashParts[0];
+		if (handlerName) {
+			var popover = handlerName + ':' + value;
+			
+			// between jquery.history and different browser bugs, it's impossible to ensure
+			// that the parameter is en- and decoded the same number of times. in order to
+			// make sure it doesn't change, we have to manipulate the url encoding a bit.
+			popover = encodeURIComponent(popover);
+			popover = popover.replace(/%/g, '\$');
+			newHash = hashParts[0] + '&popover=' + popover;
+		}
+		
+		window.location.href = 'index.php' + window.location.search + newHash;
+	},
+
+	/**
+	 * Add a handler for the popover parameter
+	 */
+	addPopoverHandler: function(handlerName, callback) {
+		this.popoverHandlers[handlerName] = callback;
+	},
+
     /**
      * Loads the given url with ajax and replaces the content
+	 * 
+	 * Note: the method is replaced in Overlay/templates/index.js - keep this in mind when making changes. 
      *
      * @param {string} urlAjax  url to load
      * @return {Boolean}
@@ -253,6 +380,13 @@ var broadcast = {
         broadcast.lastUrlRequested = urlAjax;
         function sectionLoaded(content)
         {
+			// if content is whole HTML document, do not show it, otherwise recursive page load could occur
+			var htmlDocType = '<!DOCTYPE';
+			if (content.substring(0, htmlDocType.length) == htmlDocType)
+			{
+				return;
+			}
+			
             if(urlAjax == broadcast.lastUrlRequested) {
                 $('#content').html( content ).show();
                 piwikHelper.hideAjaxLoading();
@@ -260,7 +394,7 @@ var broadcast = {
             }
         }
         var ajaxRequest = {
-            type: 'GET',
+            type: 'POST',
             url: urlAjax,
             dataType: 'html',
             async: true,
@@ -268,7 +402,7 @@ var broadcast = {
             success: sectionLoaded, // Callback when the request succeeds
             data: new Object
         };
-        piwikHelper.queueAjaxRequest( $.ajax(ajaxRequest) );
+        globalAjaxQueue.push( $.ajax(ajaxRequest) );
         return false;
     },
 
@@ -356,7 +490,7 @@ var broadcast = {
     	var result = {};
     	for (var i = 0; i != pairs.length; ++i)
     	{
-    		var pair = pairs[i].split('=');
+    		var pair = pairs[i].split(/=(.+)?/); // split only on first '='
     		result[pair[0]] = pair[1];
     	}
     	return result;
@@ -388,7 +522,12 @@ var broadcast = {
     getValueFromHash: function(param, url)
     {
         var hashStr = broadcast.getHashFromUrl(url);
-        return broadcast.getParamValue(param,hashStr);
+		if (hashStr.substr(0, 1) == '#') {
+			hashStr = hashStr.substr(1);
+		}
+		hashStr = hashStr.split('#')[0];
+
+		return broadcast.getParamValue(param,hashStr);
     },
 
 
@@ -404,7 +543,8 @@ var broadcast = {
      */
     getParamValue: function (param, url)
     {
-        var startStr = url.indexOf(param);
+        var lookFor = param + '=';
+        var startStr = url.indexOf(lookFor);
 
         if( startStr  >= 0 ) {
             var endStr = url.indexOf("&", startStr);
@@ -413,7 +553,7 @@ var broadcast = {
             }
             var value = url.substring(startStr + param.length +1,endStr);
             // sanitize values
-            value = value.replace(/[^_%\-\<\>!@=,0-9a-zA-Z]/gi, '');
+            value = value.replace(/[^_%\+\-\<\>!@\$\.=,;0-9a-zA-Z]/gi, '');
 
             return value;
         } else {
@@ -427,7 +567,7 @@ var broadcast = {
      */
     getHash: function ()
     {
-        return broadcast.getHashFromUrl().replace(/^#/, '');
+        return broadcast.getHashFromUrl().replace(/^#/, '').split('#')[0];
     },
 	
 	/**

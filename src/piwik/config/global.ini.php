@@ -32,7 +32,7 @@ dbname			= piwik_tests
 tables_prefix	= piwiktests_
 port			= 3306
 adapter 		= PDO_MYSQL
- 
+
 [superuser]
 login			= 
 password		=
@@ -119,7 +119,7 @@ action_default_name = index
 
 ; if you want all your users to use Piwik in only one language, disable the LanguagesManager
 ; plugin, and set this default_language (users won't see the language drop down)
-default_language = de
+default_language = en
 
 ; default number of elements in the datatable
 datatable_default_limit = 10
@@ -129,7 +129,7 @@ API_datatable_default_limit = 100
 
 ; This setting is overriden in the UI, under "User Settings".
 ; The date and period loaded by Piwik uses the defaults below. Possible values: yesterday, today.
-default_day = today
+default_day = yesterday
 ; Possible values: day, week, month, year.
 default_period = day
 
@@ -141,11 +141,16 @@ time_before_today_archive_considered_outdated = 10
 
 ; This setting is overriden in the UI, under "General Settings". The default value is to allow browsers
 ; to trigger the Piwik archiving process.
-enable_browser_archiving_triggering = 0
+enable_browser_archiving_triggering = 1
 
 ; If set to 1, nested reports will be archived with parent references in the datatables
 ; At the moment, this is not needed in core but it can be handy for plugins
 enable_archive_parents_of_datatable = 0
+
+; By default Piwik runs OPTIMIZE TABLE SQL queries to free spaces after deleting some data.
+; If your Piwik tracks millions of pages, the OPTIMIZE TABLE queries might run for hours (seen in "SHOW FULL PROCESSLIST \g")
+; so you can disable these special queries here:
+enable_sql_optimize_queries = 1
 
 ; MySQL minimum required version
 ; note: timezone support added in 4.1.3
@@ -199,13 +204,17 @@ login_password_recovery_email_address = "password-recovery@{DOMAIN}"
 ; name that appears as a Sender in the password recovery email
 login_password_recovery_email_name = Piwik
 
+; By default when user logs out he is redirected to Piwik "homepage" usually the Login form.
+; Uncomment the next line to set a URL to redirect the user to after he logs out of Piwik.
+; login_logout_url = http://...
+
 ; Set to 1 to disable the framebuster on standard Non-widgets pages (a click-jacking countermeasure).
 ; Default is 0 (i.e., bust frames on all non Widget pages such as Login, API, Widgets, Email reports, etc.).
-enable_framed_pages = 1
+enable_framed_pages = 0
 
 ; Set to 1 to disable the framebuster on Admin pages (a click-jacking countermeasure).
 ; Default is 0 (i.e., bust frames on the Settings forms).
-enable_framed_settings = 1
+enable_framed_settings = 0
 
 ; language cookie name for session
 language_cookie_name = piwik_lang
@@ -254,7 +263,6 @@ use_ajax_cdn = 0
 ; required AJAX library versions
 jquery_version = 1.7.2
 jqueryui_version = 1.8.22
-swfobject_version = 2.2
 
 ; Set to 1 if you're using https on your Piwik server and Piwik can't detect it,
 ; e.g., a reverse proxy using https-to-http, or a web server that doesn't
@@ -286,6 +294,10 @@ assume_secure_protocol = 0
 ;proxy_ips[] = 199.27.128.0/21
 ;proxy_ips[] = 173.245.48.0/20
 
+; Whether to enable trusted host checking. This can be disabled if you're running Piwik
+; on several URLs and do not wish to constantly edit the trusted host list.
+enable_trusted_host_check = 1
+
 ; List of trusted hosts (eg domain or subdomain names) when generating absolute URLs.
 ;
 ; Examples:
@@ -294,7 +306,7 @@ assume_secure_protocol = 0
 
 ; The release server is an essential part of the Piwik infrastructure/ecosystem
 ; to provide the latest software version.
-latest_version_url = http://piwik.org/latest.zip
+latest_version_url = http://builds.piwik.org/latest.zip
 
 ; The API server is an essential part of the Piwik infrastructure/ecosystem to
 ; provide services to Piwik installations, e.g., getLatestVersion and
@@ -306,6 +318,13 @@ api_service_url = http://api.piwik.org
 ; When requesting report metadata with $period=range, Piwik needs to translate it to multiple periods for evolution graphs.
 ; eg. $period=range&date=previous10 becomes $period=day&date=previous10. Use this setting to override the $period value.
 graphs_default_period_to_plot_when_period_range = day
+
+; The Overlay plugin shows the Top X following pages, Top X downloads and Top X outlinks which followed
+; a view of the current page. The value X can be set here.
+overlay_following_pages_limit = 300
+
+; With this option, you can disable the framed mode of the Overlay plugin. Use it if your website contains a framebuster.
+overlay_disable_framed_mode = 0
 
 [Tracker]
 ; Piwik uses first party cookies by default. If set to 1,
@@ -337,6 +356,12 @@ record_statistics			= 1
 ; after his last page view, it will be recorded as a new visit
 visit_standard_length       = 1800
 
+; The window to look back for a previous visit by this current visitor. Defaults to visit_standard_length.
+; If you are looking for higher accuracy of "returning visitors" metrics, you may set this value to 86400 or more.
+; This is especially useful when you use the Tracking API where tracking Returning Visitors often depends on this setting.
+; The value window_look_back_for_visitor is used only if it is set to greater than visit_standard_length
+window_look_back_for_visitor = 0
+
 ; visitors that stay on the website and view only one page will be considered as time on site of 0 second
 default_time_one_page_visit = 0
 
@@ -345,7 +370,7 @@ default_time_one_page_visit = 0
 ; The mapping is defined in core/DataFiles/LanguageToCountry.php,
 enable_language_to_country_guess = 1
 
-; When the misc/cron/archive.sh cron hasn't been setup, we still need to regularly run some maintenance tasks.
+; When the misc/cron/archive.php cron hasn't been setup, we still need to regularly run some maintenance tasks.
 ; Visits to the Tracker will try to trigger Scheduled Tasks (eg. scheduled PDF/HTML reports by email).
 ; Scheduled tasks will only run if 'Enable Piwik Archiving from Browser' is enabled in the General Settings.
 ; Tasks run once every hour maximum, they might not run every hour if traffic is low.
@@ -369,10 +394,19 @@ campaign_keyword_var_name	= "pk_kwd,piwik_kwd,utm_term"
 ; maximum length of a Page Title or a Page URL recorded in the log_action.name table
 page_maximum_length = 1024;
 
+; By default, when a request is identified as a "Internal Site Search", the URL will not be recorded. This is for performance reasons
+; (the less unique URLs in Piwik the better). Piwik will track, for each Site Search: "Search Keyword",
+; and optionally the "Search Category" and "Search result count". You can set this to 1 to enable tracking Site Search URLs.
+action_sitesearch_record_url = 0
+
 ; Anonymize a visitor's IP address after testing for "Ip exclude"
 ; This value is the number of octets in IP address to mask; if the AnonymizeIP plugin is deactivated, this value is ignored.
 ; For IPv4 addresses, valid values are 0..4; for IPv6 addresses, valid values are 0..16
 ip_address_mask_length = 1
+
+; Tracker cache files are the simple caching layer for Tracking.
+; TTL: Time to live for cache files, in seconds. Default to 5 minutes.
+tracker_cache_file_ttl = 300
 
 ; DO NOT USE THIS SETTING ON PUBLICLY AVAILABLE PIWIK SERVER
 ; !!! Security risk: if set to 0, it would allow anyone to push data to Piwik with custom dates in the past/future and with fake IPs !!!
@@ -433,7 +467,7 @@ password = 							; Proxy password: optional; if specified, username is mandator
 logger_error[]			= screen
 logger_exception[]		= screen
 
-; if set to 1, only requests done in CLI mode (eg. the archive.sh cron run) will be logged
+; if set to 1, only requests done in CLI mode (eg. the archive.php cron run) will be logged
 ; NOTE: log_only_when_debug_parameter will also be checked for
 log_only_when_cli = 0
 
@@ -471,6 +505,7 @@ Plugins[] 		= CoreHome
 Plugins[] 		= Proxy
 Plugins[] 		= API
 Plugins[] 		= Widgetize
+Plugins[] 		= Transitions
 Plugins[] 		= LanguagesManager
 Plugins[] 		= Actions
 Plugins[] 		= Dashboard
@@ -488,7 +523,6 @@ Plugins[] 		= VisitorInterest
 Plugins[] 		= ExampleAPI
 Plugins[] 		= ExamplePlugin
 Plugins[]		= ExampleRssWidget
-Plugins[] 		= ExampleFeedburner
 Plugins[] 		= Provider
 Plugins[]		= Feedback
 
@@ -504,6 +538,9 @@ Plugins[]		= CustomVariables
 Plugins[]		= PrivacyManager
 Plugins[]		= ImageGraph
 Plugins[]		= DoNotTrack
+Plugins[]		= Annotations
+Plugins[]		= MobileMessaging
+Plugins[]		= Overlay
 
 [PluginsInstalled]
 PluginsInstalled[] = Login
@@ -516,6 +553,7 @@ PluginsInstalled[] = Installation
 Plugins_Tracker[] = Provider
 Plugins_Tracker[] = Goals
 Plugins_Tracker[] = DoNotTrack
+Plugins_Tracker[] = UserCountry
 
 [APISettings]
 ; Any key/value pair can be added in this section, they will be available via the REST call

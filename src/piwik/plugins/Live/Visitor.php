@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Visitor.php 6077 2012-03-20 22:19:40Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Live
@@ -48,7 +47,8 @@ class Piwik_Live_Visitor
 			'visitConvertedIcon' => $this->getVisitorGoalConvertedIcon(),
 			'visitEcommerceStatus' => $this->getVisitEcommerceStatus(),
 			'visitEcommerceStatusIcon' => $this->getVisitEcommerceStatusIcon(),
-		
+
+			'searches' => $this->getNumberOfSearches(),
 			'actions' => $this->getNumberOfActions(),
 			// => false are placeholders to be filled in API later
 			'actionDetails' => false,
@@ -71,11 +71,19 @@ class Piwik_Live_Visitor
 			'daysSinceLastVisit' => $this->getDaysSinceLastVisit(),
 			'daysSinceFirstVisit' => $this->getDaysSinceFirstVisit(),
 			'daysSinceLastEcommerceOrder' => $this->getDaysSinceLastEcommerceOrder(),
-			'country' => $this->getCountryName(),
-			'countryFlag' => $this->getCountryFlag(),
 			'continent' => $this->getContinent(),
+			'continentCode' => $this->getContinentCode(),
+			'country' => $this->getCountryName(),
+			'countryCode' => $this->getCountryCode(),
+			'countryFlag' => $this->getCountryFlag(),
+			'region' => $this->getRegionName(),
+			'city' => $this->getCityName(),
+			'location' => $this->getPrettyLocation(),
+			'latitude' => $this->getLatitude(),
+			'longitude' => $this->getLongitude(),
 			'provider' => $this->getProvider(),
 			'providerUrl' => $this->getProviderUrl(),
+
 			'referrerType' => $this->getRefererType(),
 			'referrerTypeName' => $this->getRefererTypeName(),
 			'referrerName' => $this->getRefererName(),
@@ -161,6 +169,11 @@ class Piwik_Live_Visitor
 		return $this->details['visit_total_actions'];
 	}
 
+	function getNumberOfSearches()
+	{
+		return $this->details['visit_total_searches'];
+	}
+
 	function getVisitLength()
 	{
 		return $this->details['visit_total_time'];
@@ -202,19 +215,83 @@ class Piwik_Live_Visitor
 		return strtotime($this->details['visit_last_action_time']);
 	}
 
+	function getCountryCode()
+	{
+		return $this->details['location_country'];
+	}
+
 	function getCountryName()
 	{
-		return Piwik_CountryTranslate($this->details['location_country']);
+		return Piwik_CountryTranslate($this->getCountryCode());
 	}
 
 	function getCountryFlag()
 	{
-		return Piwik_getFlagFromCode($this->details['location_country']);
+		return Piwik_getFlagFromCode($this->getCountryCode());
 	}
 
 	function getContinent()
 	{
-		return Piwik_ContinentTranslate($this->details['location_continent']);
+		return Piwik_ContinentTranslate($this->getContinentCode());
+	}
+
+	function getContinentCode()
+	{
+		return Piwik_Common::getContinent($this->details['location_country']);
+	}
+
+	function getCityName()
+	{
+		if (!empty($this->details['location_city']))
+		{
+			return $this->details['location_city'];
+		}
+		return null;
+	}
+
+	public function getRegionName()
+	{
+		$region = $this->details['location_region'];
+		if ($region != '' && $region != Piwik_Tracker_Visit::UNKNOWN_CODE)
+		{
+			return Piwik_UserCountry_LocationProvider_GeoIp::getRegionNameFromCodes(
+				$this->details['location_country'], $region);
+		}
+		return null;
+	}
+
+	function getPrettyLocation()
+	{
+		$parts = array();
+
+		$city = $this->getCityName();
+		if(!empty($city)) {
+			$parts[] = $city;
+		}
+		$region = $this->getRegionName();
+		if(!empty($region)) {
+			$parts[] = $region;
+		}
+
+		// add country & return concatenated result
+		$parts[] = $this->getCountryName();
+		return implode(', ', $parts);
+	}
+
+	function getLatitude()
+	{
+		if(!empty($this->details['location_latitude'])) {
+			return $this->details['location_latitude'];
+		}
+		return null;
+	}
+
+	function getLongitude()
+	{
+		if(!empty($this->details['location_longitude'])) {
+			return $this->details['location_longitude'];
+		}
+		return null;
 	}
 
 	function getCustomVariables()
@@ -222,8 +299,7 @@ class Piwik_Live_Visitor
 		$customVariables = array();
 		for($i = 1; $i <= Piwik_Tracker::MAX_CUSTOM_VARIABLES; $i++)
 		{
-			if(!empty($this->details['custom_var_k'.$i])
-				&& !empty($this->details['custom_var_v'.$i]))
+			if(!empty($this->details['custom_var_k'.$i]))
 			{
 				$customVariables[$i] = array(
 					'customVariableName'.$i => $this->details['custom_var_k'.$i],

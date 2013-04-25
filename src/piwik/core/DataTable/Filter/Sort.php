@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Sort.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik

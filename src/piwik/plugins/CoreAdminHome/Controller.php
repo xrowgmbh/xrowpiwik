@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6562 2012-07-26 03:32:02Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -28,7 +27,7 @@ class Piwik_CoreAdminHome_Controller extends Piwik_Controller_Admin
 	{
 		Piwik::checkUserHasSomeAdminAccess();
 		$view = Piwik_View::factory('generalSettings');
-		
+
 		if(Piwik::isUserIsSuperUser())
 		{
 			$enableBrowserTriggerArchiving = Piwik_ArchiveProcessing::isBrowserTriggerArchivingEnabled();
@@ -47,13 +46,21 @@ class Piwik_CoreAdminHome_Controller extends Piwik_Controller_Admin
 			{
 				$view->configFileNotWritable = true;
 			}
+
 			$view->mail = Piwik_Config::getInstance()->mail;
 
 			$view->branding = Piwik_Config::getInstance()->branding;
-			
+
 			$directoryWritable = is_writable(PIWIK_DOCUMENT_ROOT.'/themes/');
 			$logoFilesWriteable = is_writeable(PIWIK_DOCUMENT_ROOT.'/themes/logo.png') && is_writeable(PIWIK_DOCUMENT_ROOT.'/themes/logo-header.png');
 			$view->logosWriteable = ($logoFilesWriteable || $directoryWritable) && ini_get('file_uploads') == 1;
+
+			$trustedHosts = array();
+			if (isset(Piwik_Config::getInstance()->General['trusted_hosts']))
+			{
+				$trustedHosts = Piwik_Config::getInstance()->General['trusted_hosts'];
+			}
+			$view->trustedHosts = $trustedHosts;
 		}
 		
 		$view->language = Piwik_LanguagesManager::getLanguageCodeForCurrentUser();
@@ -90,7 +97,14 @@ class Piwik_CoreAdminHome_Controller extends Piwik_Controller_Admin
 			$branding = Piwik_Config::getInstance()->branding;
 			$branding['use_custom_logo'] = Piwik_Common::getRequestVar('useCustomLogo', '0');
 			Piwik_Config::getInstance()->branding = $branding;
-
+			
+			// update trusted host settings
+			$trustedHosts = Piwik_Common::getRequestVar('trustedHosts', false, 'json');
+			if ($trustedHosts !== false)
+			{
+				Piwik_Url::saveTrustedHostnameInConfig($trustedHosts);
+			}
+			
 			Piwik_Config::getInstance()->forceSave();
 			
 			$toReturn = $response->getResponse();
@@ -98,6 +112,47 @@ class Piwik_CoreAdminHome_Controller extends Piwik_Controller_Admin
 			$toReturn = $response->getResponseException( $e );
 		}
 		echo $toReturn;
+	}
+	
+	/**
+	 * Renders and echo's an admin page that lets users generate custom JavaScript
+	 * tracking code and custom image tracker links.
+	 */
+	public function trackingCodeGenerator()
+	{
+		$view = Piwik_View::factory('jsTrackingGenerator');
+		$this->setBasicVariablesView($view);
+		$view->topMenu = Piwik_GetTopMenu();
+		$view->menu = Piwik_GetAdminMenu();
+		
+		$viewableIdSites = Piwik_SitesManager_API::getInstance()->getSitesIdWithAtLeastViewAccess();
+		
+		$defaultIdSite = reset($viewableIdSites);
+		$view->idSite = Piwik_Common::getRequestVar('idSite', $defaultIdSite, 'int');
+		
+		$view->defaultReportSiteName = Piwik_Site::getNameFor($view->idSite);
+		$view->defaultSiteRevenue = Piwik::getCurrency($view->idSite);
+		
+		$allUrls = Piwik_SitesManager_API::getInstance()->getSiteUrlsFromId($view->idSite);
+		if (isset($allUrls[1]))
+		{
+			$aliasUrl = $allUrls[1];
+		}
+		else
+		{
+			$aliasUrl = 'x.domain.com';
+		}
+		$view->defaultReportSiteAlias = $aliasUrl;
+		
+		$mainUrl = Piwik_Site::getMainUrlFor($view->idSite);
+		$view->defaultReportSiteDomain = @parse_url($mainUrl, PHP_URL_HOST);
+		
+		// get currencies for each viewable site
+		$view->currencySymbols = Piwik_SitesManager_API::getInstance()->getCurrencySymbols();
+		
+		$view->serverSideDoNotTrackEnabled = Piwik_PrivacyManager_Controller::isDntSupported();
+		
+		echo $view->render();
 	}
 	
 	/**

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Admin.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik_Menu
@@ -54,12 +53,15 @@ function Piwik_GetCurrentAdminMenuName()
 	$menu = Piwik_GetAdminMenu();
 	$currentModule = Piwik::getModule();
 	$currentAction = Piwik::getAction();
-	foreach($menu as $name => $parameters)
+	foreach($menu as $name => $submenu)
 	{
-		if($parameters['_url']['module'] == $currentModule
-			&& $parameters['_url']['action'] == $currentAction)
-		{
-			return $name;
+		foreach($submenu as $subMenuName => $parameters) {
+			if(strpos($subMenuName, '_') !== 0 &&
+				$parameters['_url']['module'] == $currentModule
+				&& $parameters['_url']['action'] == $currentAction)
+			{
+				return $subMenuName;
+			}
 		}
 	}
 	return false;
@@ -85,7 +87,21 @@ function Piwik_GetAdminMenu()
  */
 function Piwik_AddAdminMenu( $adminMenuName, $url, $displayedForCurrentUser = true, $order = 10 )
 {
-	Piwik_Menu_Admin::getInstance()->add($adminMenuName, null, $url, $displayedForCurrentUser, $order);
+	Piwik_Menu_Admin::getInstance()->add('General_Settings', $adminMenuName, $url, $displayedForCurrentUser, $order);
+}
+
+/**
+ * Adds a new AdminMenu entry with a submenu.
+ *
+ * @param string   $adminMenuName
+ * @param string   $adminSubMenuName
+ * @param string   $url
+ * @param boolean  $displayedForCurrentUser
+ * @param int      $order
+ */
+function Piwik_AddAdminSubMenu( $adminMenuName, $adminSubMenuName, $url, $displayedForCurrentUser = true, $order = 10 )
+{
+	Piwik_Menu_Admin::getInstance()->add($adminMenuName, $adminSubMenuName, $url, $displayedForCurrentUser, $order);
 }
 
 /**

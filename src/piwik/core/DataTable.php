@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DataTable.php 6998 2012-09-15 23:35:32Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -140,13 +139,12 @@ class Piwik_DataTable
 {
 	/** Name for metadata that describes when a report was archived. */
 	const ARCHIVED_DATE_METADATA_NAME = 'archived_date';
-	
+	const MAX_DEPTH_DEFAULT = 15;
+
 	/**
-	 * Maximum nesting level
-	 * 
-	 * @var int
+	 * Maximum nesting level.
 	 */
-	static private $maximumDepthLevelAllowed = 15;
+	static private $maximumDepthLevelAllowed = self::MAX_DEPTH_DEFAULT;
 	
 	/**
 	 * Array of Piwik_DataTable_Row
@@ -245,11 +243,19 @@ class Piwik_DataTable
 	 * @var array
 	 */
 	protected $metadata = array();
-
+	
+	/**
+	 * Maximum number of rows allowed in this datatable (including the summary row).
+	 * If adding more rows is attempted, the extra rows get summed to the summary row.
+	 * 
+	 * @var int
+	 */
+	protected $maximumAllowedRows = 0;
+	
 	const ID_SUMMARY_ROW = -1;
 	const LABEL_SUMMARY_ROW = -1;
 	const ID_PARENTS = -2;
-
+	
 	/**
 	 * Builds the DataTable, registers itself to the manager
 	 *
@@ -596,6 +602,25 @@ class Piwik_DataTable
 	 */
 	public function addRow( Piwik_DataTable_Row $row )
 	{
+		// if there is a upper limit on the number of allowed rows and the table is full,
+		// add the new row to the summary row
+		if ($this->maximumAllowedRows > 0
+			&& $this->getRowsCount() >= $this->maximumAllowedRows - 1)
+		{
+			if ($this->summaryRow === null) // create the summary row if necessary
+			{
+				$this->addSummaryRow(new Piwik_DataTable_Row(array(
+					Piwik_DataTable_Row::COLUMNS => $row->getColumns()
+				)));
+				$this->summaryRow->setColumn('label', self::LABEL_SUMMARY_ROW);
+			}
+			else
+			{
+				$this->summaryRow->sumRow($row, $enableCopyMetadata = false);
+			}
+			return $this->summaryRow;
+		}
+		
 		$this->rows[] = $row;
 		if(!$this->indexNotUpToDate
 			&& $this->rebuildIndexContinuously)
@@ -607,16 +632,19 @@ class Piwik_DataTable
 			}
 			$this->indexNotUpToDate = false;
 		}
+		return $row;
 	}
 
 	/**
 	 * Sets the summary row (a dataTable can have only one summary row)
 	 *
 	 * @param Piwik_DataTable_Row  $row
+	 * @return Piwik_DataTable_Row Returns $row.
 	 */
 	public function addSummaryRow( Piwik_DataTable_Row $row )
 	{
 		$this->summaryRow = $row;
+		return $row;
 	}
 
 	/**
@@ -1006,7 +1034,7 @@ class Piwik_DataTable
 		if($depth > self::$maximumDepthLevelAllowed)
 		{
 			$depth = 0;
-			throw new Exception("Maximum recursion level of ".self::$maximumDepthLevelAllowed. " reached. You have probably set a DataTable_Row with an associated DataTable which belongs already to its parent hierarchy.");
+			throw new Exception("Maximum recursion level of ".self::$maximumDepthLevelAllowed. " reached. Maybe you have set a DataTable_Row with an associated DataTable belonging already to one of its parent tables?");
 		}
 		if( !is_null($maximumRowsInDataTable) )
 		{
@@ -1148,7 +1176,7 @@ class Piwik_DataTable
 		// if we detect such a "simple" data structure we convert it to a row with the correct columns' names
 		$thisIsNotThatSimple = false;
 		
-		foreach($array as $columnName => $columnValue )
+		foreach($array as $columnValue )
 		{
 			if(is_array($columnValue) || is_object($columnValue)) 
 			{
@@ -1303,17 +1331,6 @@ class Piwik_DataTable
 	}
 	
 	/**
-	 * Gets the maximum nesting level for datatables.
-	 * 
-	 * @return int
-	 */
-	static public function getMaximumDepthLevelAllowed()
-	{
-		return self::$maximumDepthLevelAllowed;
-	}
-
-	
-	/**
 	 * Sets the maximum nesting level to at least a certain value. If the current value is
 	 * greater than the supplied level, the maximum nesting level is not changed.
 	 * 
@@ -1322,6 +1339,9 @@ class Piwik_DataTable
 	static public function setMaximumDepthLevelAllowedAtLeast( $atLeastLevel )
 	{
 		self::$maximumDepthLevelAllowed = max($atLeastLevel, self::$maximumDepthLevelAllowed);
+		if(self::$maximumDepthLevelAllowed < 1) {
+			self::$maximumDepthLevelAllowed = 1;
+		}
 	}
 	
 	/**
@@ -1358,5 +1378,180 @@ class Piwik_DataTable
 	public function setMetadata( $name, $value )
 	{
 		$this->metadata[$name] = $value;
+	}
+	
+	/**
+	 * Sets the maximum number of rows allowed in this datatable (including the summary
+	 * row). If adding more then the allowed number of rows is attempted, the extra
+	 * rows are added to the summary row.
+	 * 
+	 * @param int|null $maximumAllowedRows
+	 */
+	public function setMaximumAllowedRows( $maximumAllowedRows )
+	{
+		$this->maximumAllowedRows = $maximumAllowedRows;
+	}
+	
+	/**
+	 * Traverses a DataTable tree using an array of labels and returns the row
+	 * it finds or false if it cannot find one, and the number of segments of
+	 * the path successfully walked.
+	 * 
+	 * If $missingRowColumns is supplied, the specified path is created. When
+	 * a subtable is encountered w/o the queried label, a new row is created
+	 * with the label, and a subtable is added to the row.
+	 * 
+	 * @param array $path The path to walk. An array of label values.
+	 * @param array|false $missingRowColumns
+	 *						The default columns to use when creating new arrays.
+	 * 						If this parameter is supplied, new rows will be
+	 * 						created if labels cannot be found.
+	 * @param int $maxSubtableRows The maximum number of allowed rows in new
+	 *                             subtables.
+	 * @return array First element is the found row or false. Second element is
+	 *               the number of path segments walked. If a row is found, this
+	 *               will be == to count($path). Otherwise, it will be the index
+	 *               of the path segment that we could not find.
+	 */
+	public function walkPath( $path, $missingRowColumns = false, $maxSubtableRows = 0 )
+	{
+		$pathLength = count($path);
+		
+		$table = $this;
+		$next = false;
+		for ($i = 0; $i < $pathLength; ++$i)
+		{
+			$segment = $path[$i];
+			
+			$next = $table->getRowFromLabel($segment);
+			if ($next === false)
+			{
+				// if there is no table to advance to, and we're not adding missing rows, return false
+				if ($missingRowColumns === false)
+				{
+					return array(false, $i);
+				}
+				else // if we're adding missing rows, add a new row
+				{
+					$row = new Piwik_DataTable_Row_DataTableSummary();
+					$row->setColumns(array('label' => $segment) + $missingRowColumns);
+					
+					$next = $table->addRow($row);
+
+					if ($next !== $row) // if the row wasn't added, the table is full
+					{
+						// Summary row, has no metadata
+						$next->deleteMetadata();
+						return array($next, $i);
+					}
+				}
+			}
+			
+			$table = $next->getSubtable();
+			if ($table === false)
+			{
+				// if the row has no table (and thus no child rows), and we're not adding
+				// missing rows, return false
+				if ($missingRowColumns === false)
+				{
+					return array(false, $i);
+				}
+				else if ($i != $pathLength - 1) // create subtable if missing, but only if not on the last segment
+				{
+					$table = new Piwik_DataTable();
+					$table->setMaximumAllowedRows($maxSubtableRows);
+					$next->setSubtable($table);
+					// Summary row, has no metadata
+					$next->deleteMetadata();
+				}
+			}
+		}
+		
+		return array($next, $i);
+	}
+
+	/**
+	 * Returns a new DataTable that contains the rows of each of this table's
+	 * subtables.
+	 * 
+	 * @param string|false $labelColumn If supplied the label of the parent row will be
+	 *                                  added to a new column in each subtable row. If set to,
+	 *                                  'label' each subtable row's label will be prepended w/
+	 *                                  the parent row's label.
+	 * @param bool $useMetadataColumn If true and if $labelColumn is supplied, the parent row's
+	 *                                label will be added as metadata.
+	 * @return Piwik_DataTable
+	 */
+	public function mergeSubtables( $labelColumn = false, $useMetadataColumn = false )
+	{
+		$result = new Piwik_DataTable();
+		foreach ($this->getRows() as $row)
+		{
+			$subtable = $row->getSubtable();
+			if ($subtable !== false)
+			{
+				$parentLabel = $row->getColumn('label');
+				
+				// add a copy of each subtable row to the new datatable
+				foreach ($subtable->getRows() as $id => $subRow)
+				{
+					$copy = clone $subRow;
+					
+					// if the summary row, add it to the existing summary row (or add a new one)
+					if ($id == self::ID_SUMMARY_ROW)
+					{
+						$existing = $result->getRowFromId(self::ID_SUMMARY_ROW);
+						if ($existing === false)
+						{
+							$result->addSummaryRow($copy);
+						}
+						else
+						{
+							$existing->sumRow($copy);
+						}
+					}
+					else
+					{
+						if ($labelColumn !== false)
+						{
+							// if we're modifying the subtable's rows' label column, then we make
+							// sure to prepend the existing label w/ the parent row's label. otherwise
+							// we're just adding the parent row's label as a new column/metadata.
+							$newLabel = $parentLabel;
+							if ($labelColumn == 'label')
+							{
+								$newLabel .= ' - '.$copy->getColumn('label');
+							}
+					
+							// modify the child row's label or add new column/metadata
+							if ($useMetadataColumn)
+							{
+								$copy->setMetadata($labelColumn, $newLabel);
+							}
+							else
+							{
+								$copy->setColumn($labelColumn, $newLabel);
+							}
+						}
+					
+						$result->addRow($copy);
+					}
+				}
+			}
+		}
+		return $result;
+	}
+	
+	/**
+	 * Returns a new DataTable created with data from a 'simple' array.
+	 * 
+	 * @param array $array
+	 * @return Piwik_DataTable
+	 */
+	public static function makeFromSimpleArray( $array )
+	{
+		$dataTable = new Piwik_DataTable();
+		$dataTable->addRowsFromSimpleArray($array);
+		return $dataTable;
 	}
 }

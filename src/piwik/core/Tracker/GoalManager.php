@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GoalManager.php 6743 2012-08-14 03:30:08Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -80,7 +79,7 @@ class Piwik_Tracker_GoalManager
 	
 	static public function getGoalDefinitions( $idSite )
 	{
-		$websiteAttributes = Piwik_Common::getCacheWebsiteAttributes( $idSite );
+		$websiteAttributes = Piwik_Tracker_Cache::getCacheWebsiteAttributes( $idSite );
 		if(isset($websiteAttributes['goals']))
 		{
 			return $websiteAttributes['goals'];
@@ -243,10 +242,6 @@ class Piwik_Tracker_GoalManager
 									$enableLanguageToCountryGuess = Piwik_Config::getInstance()->Tracker['enable_language_to_country_guess'],
 									$visitorInformation['location_ip'] 
 							);
-							
-		$location_continent = isset($visitorInformation['location_continent']) 
-								? $visitorInformation['location_continent'] 
-								: Piwik_Common::getContinent($location_country);
 
 		$goal = array(
 			'idvisit' 			=> $visitorInformation['idvisit'],
@@ -254,13 +249,21 @@ class Piwik_Tracker_GoalManager
 			'idvisitor' 		=> $visitorInformation['idvisitor'],
 			'server_time' 		=> Piwik_Tracker::getDatetimeFromTimestamp($visitorInformation['visit_last_action_time']),
 			'location_country'  => $location_country,
-			'location_continent'=> $location_continent,
 			'visitor_returning' => $visitorInformation['visitor_returning'],
 			'visitor_days_since_first' => $visitorInformation['visitor_days_since_first'],
 			'visitor_days_since_order' => $visitorInformation['visitor_days_since_order'],
 			'visitor_count_visits' => $visitorInformation['visitor_count_visits'],
 		);
-
+		
+		$extraLocationCols = array('location_region', 'location_city', 'location_latitude', 'location_longitude');
+		foreach ($extraLocationCols as $col)
+		{
+			if (isset($visitorInformation[$col]))
+			{
+				$goal[$col] = $visitorInformation[$col];
+			}
+		}
+		
 		// Copy Custom Variables from Visit row to the Goal conversion
 		for($i=1; $i<=Piwik_Tracker::MAX_CUSTOM_VARIABLES; $i++) 
 		{
@@ -293,7 +296,7 @@ class Piwik_Tracker_GoalManager
         
         // 0) In some (unknown!?) cases the campaign is not found in the attribution cookie, but the URL ref was found.
 		//    In this case we look up if the current visit is credited to a campaign and will credit this campaign rather than the URL ref (since campaigns have higher priority)
-		if(empty($refererCampaignName)
+		if(empty($referrerCampaignName)
 			&& $type == Piwik_Common::REFERER_TYPE_CAMPAIGN
 			&& !empty($name)
 		)
@@ -423,6 +426,8 @@ class Piwik_Tracker_GoalManager
 		{
 			$this->recordEcommerceItems($goal, $items);
 		}
+		
+		Piwik_PostEvent('Tracker.recordEcommerceGoal', $goal);
 	}
 	
 	/**
@@ -655,14 +660,10 @@ class Piwik_Tracker_GoalManager
 		}
 		
 		$actionsLookedUp = Piwik_Tracker_Action::loadActionId($actionsToLookupAllItems);
-//		var_dump($actionsLookedUp);
-
 		
 		// Replace SKU, name & category by their ID action
 		foreach($cleanedItems as $index => &$item)
 		{
-			list($sku, $name, $category, $price, $quantity) = $item;
-			
 			// SKU
 			$item[0] = $actionsLookedUp[ $index * $columnsInEachRow + 0][2];
 			// Name
@@ -775,7 +776,7 @@ class Piwik_Tracker_GoalManager
 	 * Records a standard non-Ecommerce goal in the DB (URL/Title matching),
 	 * linking the conversion to the action that triggered it
 	 * @param $goal
-	 * @param $action
+	 * @param Piwik_Tracker_Action $action
 	 * @param $visitorInformation
 	 */
 	protected function recordStandardGoals($goal, $action, $visitorInformation)
@@ -790,7 +791,7 @@ class Piwik_Tracker_GoalManager
 			
 			if(!is_null($action))
 			{
-				$newGoal['idaction_url'] = (int)$action->getIdActionUrl();
+				$newGoal['idaction_url'] = $action->getIdActionUrl();
 				$newGoal['idlink_va'] = $action->getIdLinkVisitAction();
 			}
 
@@ -800,6 +801,8 @@ class Piwik_Tracker_GoalManager
 										: $visitorInformation['visit_last_action_time'];
 										
 			$this->recordGoal($newGoal);
+			
+			Piwik_PostEvent('Tracker.recordStandardGoals', $newGoal);
 		}
 	}
 	/**

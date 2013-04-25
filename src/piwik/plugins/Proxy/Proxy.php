@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Proxy.php 3175 2010-09-25 03:52:17Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Proxy

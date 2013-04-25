@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Array.php 6628 2012-08-01 21:49:16Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -220,6 +219,13 @@ class Piwik_DataTable_Array
 		}
 	}
 
+    public function deleteRow($id)
+    {
+        foreach($this->array as $table)
+        {
+            $table->deleteRow($id);
+        }
+    }
 	/**
 	 * Deletes the given column
 	 *
@@ -381,5 +387,24 @@ class Piwik_DataTable_Array
 				$childTable->addDataTable($tableToSum);
 			}
 		}
+	}
+	
+	/**
+	 * Returns a new DataTable_Array w/ child tables that have had their
+	 * subtables merged.
+	 * 
+	 * @see Piwik_DataTable::mergeSubtables
+	 * 
+	 * @return Piwik_DataTable_Array
+	 */
+	public function mergeSubtables()
+	{
+		$result = new Piwik_DataTable_Array();
+		$result->keyName = $this->keyName;
+		foreach ($this->array as $label => $childTable)
+		{
+			$result->addTable($childTable->mergeSubtables(), $label);
+		}
+		return $result;
 	}
 }

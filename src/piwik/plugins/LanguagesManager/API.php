@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_LanguagesManager
@@ -167,6 +166,7 @@ class Piwik_LanguagesManager_API
 	public function getLanguageForUser( $login )
 	{
 		Piwik::checkUserIsSuperUserOrTheUser($login);
+		Piwik::checkUserIsNotAnonymous();
 		return Piwik_FetchOne('SELECT language FROM '.Piwik_Common::prefixTable('user_language') .
 					' WHERE login = ? ', array($login ));
 	}
@@ -181,6 +181,7 @@ class Piwik_LanguagesManager_API
 	public function setLanguageForUser($login, $languageCode)
 	{
 		Piwik::checkUserIsSuperUserOrTheUser($login);
+		Piwik::checkUserIsNotAnonymous();
 		if(!$this->isLanguageAvailable($languageCode))
 		{
 			return false;

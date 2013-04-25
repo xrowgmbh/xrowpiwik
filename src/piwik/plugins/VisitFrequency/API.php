@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 5421 2011-11-09 18:07:25Z EZdesign $
  * 
  * @category Piwik_Plugins
  * @package Piwik_VisitFrequency

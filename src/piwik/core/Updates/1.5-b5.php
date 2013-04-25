@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: 1.5-b5.php 4766 2011-05-22 20:00:44Z matt $
  *
  * @category Piwik
  * @package Updates

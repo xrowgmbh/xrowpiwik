@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6912 2012-09-03 15:14:59Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -150,6 +149,7 @@ abstract class Piwik_Controller
 				);
 
 		$view->main();
+
 		$rendered = $view->getView()->render();
 		if($fetch)
 		{
@@ -171,17 +171,6 @@ abstract class Piwik_Controller
 	{
 		$view = Piwik_ViewDataTable::factory('graphEvolution');
 		$view->init( $currentModuleName, $currentControllerAction, $apiMethod );
-		
-		// if the date is not yet a nicely formatted date range ie. YYYY-MM-DD,YYYY-MM-DD we build it
-		// otherwise the current controller action is being called with the good date format already so it's fine
-		// see constructor
-		if( !is_null($this->date))
-		{
-			$view->setParametersToModify( 
-				$this->getGraphParamsModified( array('date' => $this->strDate))
-				);
-		}
-		
 		return $view;
 	}
 
@@ -338,13 +327,17 @@ abstract class Piwik_Controller
 	 * Works only for API methods that originally returns numeric values (there is no cast here)
 	 *
 	 * @param string  $methodToCall  Name of method to call, eg. Referers.getNumberOfDistinctSearchEngines
+	 * @param string|false $date A custom date to use when getting the value. If false, the 'date' query
+	 *                           parameter is used.
 	 * @return int|float
 	 */
-	protected function getNumericValue( $methodToCall )
+	protected function getNumericValue( $methodToCall, $date = false )
 	{
-		$requestString = 'method='.$methodToCall.'&format=original';
-		$request = new Piwik_API_Request($requestString);
-		return $request->process();
+		$params = $date === false ? array() : array('date' => $date);
+		
+		$return = Piwik_API_Request::processRequest($methodToCall, $params);
+		$columns = $return->getFirstRow()->getColumns();
+		return reset($columns);
 	}
 
 	/**
@@ -370,7 +363,7 @@ abstract class Piwik_Controller
 		{
 			if(is_array($value))
 			{
-				$value = implode(',', $value);
+				$value = rawurlencode(implode(',', $value));
 			}
 		}
 		$url = Piwik_Url::getCurrentQueryStringWithParametersModified($params);
@@ -463,31 +456,114 @@ abstract class Piwik_Controller
 			$language = Piwik_LanguagesManager::getLanguageForSession();
 			$view->language = !empty($language) ? $language : Piwik_LanguagesManager::getLanguageCodeForCurrentUser();
 			
+			$view->config_action_url_category_delimiter = Piwik_Config::getInstance()->General['action_url_category_delimiter'];
+
 			$this->setBasicVariablesView($view);
+
+			$view->topMenu = Piwik_GetTopMenu();
 		} catch(Exception $e) {
-			Piwik_ExitWithMessage($e->getMessage());
+			Piwik_ExitWithMessage($e->getMessage(), '' /* $e->getTraceAsString() */ );
 		}
 	}
-	
+
 	/**
 	 * Set the minimal variables in the view object
-	 * 
+	 *
 	 * @param Piwik_View  $view
 	 */
 	protected function setBasicVariablesView($view)
 	{
-		$view->topMenu = Piwik_GetTopMenu();
 		$view->debugTrackVisitsInsidePiwikUI = Piwik_Config::getInstance()->Debug['track_visits_inside_piwik_ui'];
 		$view->isSuperUser = Zend_Registry::get('access')->isSuperUser();
+		$view->hasSomeAdminAccess = Piwik::isUserHasSomeAdminAccess();
 		$view->isCustomLogo = Piwik_Config::getInstance()->branding['use_custom_logo'];
 		$view->logoHeader = Piwik_API_API::getInstance()->getHeaderLogoUrl();
 		$view->logoLarge = Piwik_API_API::getInstance()->getLogoUrl();
-		
+		$view->logoSVG = Piwik_API_API::getInstance()->getSVGLogoUrl();
+		$view->hasSVGLogo = Piwik_API_API::getInstance()->hasSVGLogo();
+
 		$view->enableFrames = Piwik_Config::getInstance()->General['enable_framed_pages']
 			|| @Piwik_Config::getInstance()->General['enable_framed_logins'];
 		if(!$view->enableFrames)
 		{
 			$view->setXFrameOptions('sameorigin');
+		}
+
+		self::setHostValidationVariablesView($view);
+	}
+
+	/**
+	 * Checks if the current host is valid and sets variables on the given view, including:
+	 * 
+	 * isValidHost - true if host is valid, false if otherwise
+	 * invalidHostMessage - message to display if host is invalid (only set if host is invalid)
+	 * invalidHost - the invalid hostname (only set if host is invalid)
+	 * mailLinkStart - the open tag of a link to email the super user of this problem (only set
+	 *                 if host is invalid)
+	 */
+	public static function setHostValidationVariablesView( $view )
+	{
+		// check if host is valid
+		$view->isValidHost = Piwik_Url::isValidHost();
+		if (!$view->isValidHost)
+		{
+			// invalid host, so display warning to user
+			$validHost = Piwik_Config::getInstance()->General['trusted_hosts'][0];
+			$invalidHost = Piwik_Common::sanitizeInputValue($_SERVER['HTTP_HOST']);
+			
+			$emailSubject = rawurlencode(Piwik_Translate('CoreHome_InjectedHostEmailSubject', $invalidHost));
+			$emailBody = rawurlencode(Piwik_Translate('CoreHome_InjectedHostEmailBody'));
+			$superUserEmail = Piwik::getSuperUserEmail();
+			
+			$mailToUrl = "mailto:$superUserEmail?subject=$emailSubject&body=$emailBody";
+			$mailLinkStart = "<a href=\"$mailToUrl\">";
+			
+			$invalidUrl = Piwik_Url::getCurrentUrlWithoutQueryString($checkIfTrusted = false);
+			$validUrl = Piwik_Url::getCurrentScheme() . '://' . $validHost
+					  . Piwik_Url::getCurrentScriptName();
+
+			$validLink = "<a href=\"$validUrl\">$validUrl</a>";
+			$changeTrustedHostsUrl = "index.php"
+				. Piwik_Url::getCurrentQueryStringWithParametersModified(array(
+					'module' => 'CoreAdminHome',
+					'action' => 'generalSettings'
+				))
+				. "#trustedHostsSection";
+			
+			$warningStart = Piwik_Translate('CoreHome_InjectedHostWarningIntro', array(
+				'<strong>'.$invalidUrl.'</strong>',
+				'<strong>'.$validUrl.'</strong>'
+			)) . ' <br/>';
+			
+			if (Piwik::isUserIsSuperUser())
+			{
+				$view->invalidHostMessage = $warningStart . ' '
+					. Piwik_Translate('CoreHome_InjectedHostSuperUserWarning', array(
+						"<a href=\"$changeTrustedHostsUrl\">",
+						$invalidHost,
+						'</a>',
+						"<br/><a href=\"$validUrl\">",
+						$validHost,
+						'</a>'
+					));
+			}
+			else
+			{
+				$view->invalidHostMessage = $warningStart . ' '
+					. Piwik_Translate('CoreHome_InjectedHostNonSuperUserWarning', array(
+						"<br/><a href=\"$validUrl\">",
+						'</a>',
+						$mailLinkStart,
+						'</a>'
+					));
+			}
+			$view->invalidHostMessageHowToFix = '<b>How do I fix this problem and how do I login again?</b><br/> The Piwik Super User can manually edit the file piwik/config/config.ini.php
+						and add the following lines: <pre>[General]'."\n".'trusted_hosts[] = "'.$validHost.'"</pre><br/>After making the change, you will be able to login again.<br/><br/>
+						You may also <i>disable this security feature (not recommended)</i>. To do so edit config/config.ini.php and add:
+						<pre>[General]'."\n".'enable_trusted_host_check=0</pre>';
+
+			$view->invalidHost = $invalidHost; // for UserSettings warning
+			$view->invalidHostMailLinkStart = $mailLinkStart;
 		}
 	}
 
@@ -636,7 +712,7 @@ abstract class Piwik_Controller
 		if(Piwik::isUserIsSuperUser())
 		{
 			Piwik_ExitWithMessage("Error: no website was found in this Piwik installation. 
-			<br />Check the table '". Piwik_Common::prefixTable('site') ."' that should contain your Piwik websites.", false, true);
+			<br />Check the table '". Piwik_Common::prefixTable('site') ."' in your database, it should contain your Piwik websites.", false, true);
 		}
 		
 		$currentLogin = Piwik::getCurrentUserLogin();
@@ -767,5 +843,82 @@ abstract class Piwik_Controller
 		{
 			return $period->getPrettyString();
 		}
+	}
+
+
+
+	/**
+	 * Returns the pretty date representation
+	 *
+	 * @param $date string
+	 * @param $period string
+	 * @return string Pretty date
+	 */
+	public static function getPrettyDate($date, $period)
+	{
+		return self::getCalendarPrettyDate( Piwik_Period::factory($period, Piwik_Date::factory($date)) );
+	}
+
+
+	/**
+	 * Calculates the evolution from one value to another and returns HTML displaying
+	 * the evolution percent. The HTML includes an up/down arrow and is colored red, black or
+	 * green depending on whether the evolution is negative, 0 or positive.
+	 * 
+	 * No HTML is returned if the current value and evolution percent are both 0.
+	 * 
+	 * @param string $date The date of the current value.
+	 * @param int $currentValue The value to calculate evolution to.
+	 * @param string $pastDate The date of past value.
+	 * @param int $pastValue The value in the past to calculate evolution from.
+	 * @return string|false The HTML or false if the evolution is 0 and the current value is 0.
+	 */
+	protected function getEvolutionHtml( $date, $currentValue, $pastDate, $pastValue)
+	{
+		$evolutionPercent = Piwik_DataTable_Filter_CalculateEvolutionFilter::calculate(
+			$currentValue, $pastValue, $precision = 1);
+		
+		// do not display evolution if evolution percent is 0 and current value is 0
+		if ($evolutionPercent == 0
+			&& $currentValue == 0)
+		{
+			return false;
+		}
+		
+		$titleEvolutionPercent = $evolutionPercent;
+		if ($evolutionPercent < 0)
+		{
+			$color = "#e02a3b"; //red
+			$img = "arrow_down.png";
+		}
+		else if ($evolutionPercent == 0)
+		{
+			$img = "stop.png";
+		}
+		else
+		{
+			$color = "green";
+			$img = "arrow_up.png";
+			$titleEvolutionPercent = '+'.$titleEvolutionPercent;
+		}
+		
+		$title = Piwik_Translate('General_EvolutionSummaryGeneric', array(
+				Piwik_Translate('General_NVisits', $currentValue),
+				$date,
+				Piwik_Translate('General_NVisits', $pastValue),
+				$pastDate,
+				$titleEvolutionPercent
+		));
+		
+		$result = '<span class="metricEvolution" title="'.$title
+				. '"><img style="padding-right:4px" src="plugins/MultiSites/images/'.$img.'"/><strong';
+		
+		if (isset($color))
+		{
+			$result .= ' style="color:'.$color.'"';
+		}
+		$result .= '>'.$evolutionPercent.'</strong></span>';
+		
+		return $result;
 	}
 }

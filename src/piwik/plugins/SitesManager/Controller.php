@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5806 2012-02-11 10:48:22Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_SitesManager
@@ -40,6 +39,7 @@ class Piwik_SitesManager_Controller extends Piwik_Controller_Admin
 			$site['alias_urls'] = Piwik_SitesManager_API::getInstance()->getSiteUrlsFromId($site['idsite']);
 			$site['excluded_ips'] = str_replace(',','<br/>', $site['excluded_ips']);
 			$site['excluded_parameters'] = str_replace(',','<br/>', $site['excluded_parameters']);
+			$site['excluded_user_agents'] = str_replace(',', '<br/>', $site['excluded_user_agents']);
 		}
 		$view->adminSites = $sites;
 		$view->adminSitesCount = count($sites);
@@ -57,6 +57,18 @@ class Piwik_SitesManager_Controller extends Piwik_Controller_Admin
 		$view->globalExcludedIps = str_replace(',',"\n", $excludedIpsGlobal);
 		$excludedQueryParametersGlobal = Piwik_SitesManager_API::getInstance()->getExcludedQueryParametersGlobal();
 		$view->globalExcludedQueryParameters = str_replace(',',"\n", $excludedQueryParametersGlobal);
+		
+		$globalExcludedUserAgents = Piwik_SitesManager_API::getInstance()->getExcludedUserAgentsGlobal();
+		$view->globalExcludedUserAgents = str_replace(',', "\n", $globalExcludedUserAgents);
+
+		$view->globalSearchKeywordParameters = Piwik_SitesManager_API::getInstance()->getSearchKeywordParametersGlobal();
+		$view->globalSearchCategoryParameters = Piwik_SitesManager_API::getInstance()->getSearchCategoryParametersGlobal();
+		$view->isSearchCategoryTrackingEnabled = Piwik_PluginsManager::getInstance()->isPluginActivated('CustomVariables');
+		$view->allowSiteSpecificUserAgentExclude =
+			Piwik_SitesManager_API::getInstance()->isSiteSpecificUserAgentExcludeEnabled();
+
+		$view->globalKeepURLFragments = Piwik_SitesManager_API::getInstance()->getKeepURLFragmentsGlobal();
+		
 		$view->currentIpAddress = Piwik_IP::getIpFromHeader();
 
 		$view->showAddSite = (boolean) Piwik_Common::getRequestVar('showaddsite', false);
@@ -78,11 +90,23 @@ class Piwik_SitesManager_Controller extends Piwik_Controller_Admin
 			$timezone = Piwik_Common::getRequestVar('timezone', false);
 			$excludedIps = Piwik_Common::getRequestVar('excludedIps', false);
 			$excludedQueryParameters = Piwik_Common::getRequestVar('excludedQueryParameters', false);
+			$excludedUserAgents = Piwik_Common::getRequestVar('excludedUserAgents', false);
 			$currency = Piwik_Common::getRequestVar('currency', false);
-			Piwik_SitesManager_API::getInstance()->setDefaultTimezone($timezone);
-			Piwik_SitesManager_API::getInstance()->setDefaultCurrency($currency);
-			Piwik_SitesManager_API::getInstance()->setGlobalExcludedQueryParameters($excludedQueryParameters);
-			Piwik_SitesManager_API::getInstance()->setGlobalExcludedIps($excludedIps);
+			$searchKeywordParameters = Piwik_Common::getRequestVar('searchKeywordParameters', $default = "");
+			$searchCategoryParameters = Piwik_Common::getRequestVar('searchCategoryParameters', $default = "");
+			$enableSiteUserAgentExclude = Piwik_Common::getRequestVar('enableSiteUserAgentExclude', $default = 0);
+			$keepURLFragments = Piwik_Common::getRequestVar('keepURLFragments', $default = 0);
+			
+			$api = Piwik_SitesManager_API::getInstance();
+			$api->setDefaultTimezone($timezone);
+			$api->setDefaultCurrency($currency);
+			$api->setGlobalExcludedQueryParameters($excludedQueryParameters);
+			$api->setGlobalExcludedIps($excludedIps);
+			$api->setGlobalExcludedUserAgents($excludedUserAgents);
+			$api->setGlobalSearchParameters($searchKeywordParameters, $searchCategoryParameters);
+			$api->setSiteSpecificUserAgentExcludeEnabled($enableSiteUserAgentExclude == 1);
+			$api->setKeepURLFragmentsGlobal($keepURLFragments);
+			
 			$toReturn = $response->getResponse();
 		} catch(Exception $e ) {
 			$toReturn = $response->getResponseException( $e );
@@ -173,6 +197,7 @@ class Piwik_SitesManager_Controller extends Piwik_Controller_Admin
 			}
 		}
 
+		Piwik_DataTable_Renderer_Json::sendHeaderJSON();
 		print Piwik_Common::json_encode($results);
 	}
 }

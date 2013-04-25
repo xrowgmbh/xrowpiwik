@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Cookie.php 6533 2012-07-22 16:00:17Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -190,9 +189,6 @@ class Piwik_Cookie
 		if(strlen($cookieString) > self::MAX_COOKIE_SIZE)
 		{
 			// If the cookie was going to be too large, instead, delete existing cookie and start afresh
-			// This will result in slightly less accuracy in the case
-			// where someone visits more than dozen websites tracked by the same Piwik
-			// This will usually be the Piwik super user itself checking all his websites regularly
 			$this->delete();
 			return;
 		}

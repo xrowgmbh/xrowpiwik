@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Renderer.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -111,7 +110,16 @@ abstract class Piwik_DataTable_Renderer
 	 * 
 	 * @return string
 	 */
-	abstract public function renderException();	
+	abstract public function renderException();
+
+	protected function getExceptionMessage()
+	{
+		$message = self::renderHtmlEntities($this->exception->getMessage());
+
+		// DEBUG
+//		$message .= $this->exception->getTraceAsString();
+		return $message;
+	}
 	
 	/**
 	 * @see render()
@@ -130,10 +138,11 @@ abstract class Piwik_DataTable_Renderer
 	 */
 	public function setTable($table)
 	{
-		if(!($table instanceof Piwik_DataTable)
+		if (!is_array($table)
+			&& !($table instanceof Piwik_DataTable)
 			&& !($table instanceof Piwik_DataTable_Array))
 		{
-			throw new Exception("The renderer accepts only a Piwik_DataTable or an array of DataTable (Piwik_DataTable_Array) object.");
+			throw new Exception("DataTable renderers renderer accepts only Piwik_DataTable and Piwik_DataTable_Array instances, and array instances.");
 		}
 		$this->table = $table;
 	}
@@ -220,6 +229,11 @@ abstract class Piwik_DataTable_Renderer
 			&& !is_numeric($value)) 
 		{
 			$value = html_entity_decode($value, ENT_COMPAT, 'UTF-8');
+			// make sure non-UTF-8 chars don't cause htmlspecialchars to choke
+			if (function_exists('mb_convert_encoding'))
+			{
+				$value = @mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+			}
 			$value = htmlspecialchars($value, ENT_COMPAT, 'UTF-8');
 			$htmlentities = array( "&nbsp;","&iexcl;","&cent;","&pound;","&curren;","&yen;","&brvbar;","&sect;","&uml;","&copy;","&ordf;","&laquo;","&not;","&shy;","&reg;","&macr;","&deg;","&plusmn;","&sup2;","&sup3;","&acute;","&micro;","&para;","&middot;","&cedil;","&sup1;","&ordm;","&raquo;","&frac14;","&frac12;","&frac34;","&iquest;","&Agrave;","&Aacute;","&Acirc;","&Atilde;","&Auml;","&Aring;","&AElig;","&Ccedil;","&Egrave;","&Eacute;","&Ecirc;","&Euml;","&Igrave;","&Iacute;","&Icirc;","&Iuml;","&ETH;","&Ntilde;","&Ograve;","&Oacute;","&Ocirc;","&Otilde;","&Ouml;","&times;","&Oslash;","&Ugrave;","&Uacute;","&Ucirc;","&Uuml;","&Yacute;","&THORN;","&szlig;","&agrave;","&aacute;","&acirc;","&atilde;","&auml;","&aring;","&aelig;","&ccedil;","&egrave;","&eacute;","&ecirc;","&euml;","&igrave;","&iacute;","&icirc;","&iuml;","&eth;","&ntilde;","&ograve;","&oacute;","&ocirc;","&otilde;","&ouml;","&divide;","&oslash;","&ugrave;","&uacute;","&ucirc;","&uuml;","&yacute;","&thorn;","&yuml;","&euro;");
             $xmlentities = array(  "&#162;","&#163;","&#164;","&#165;","&#166;","&#167;","&#168;","&#169;","&#170;","&#171;","&#172;","&#173;","&#174;","&#175;","&#176;","&#177;","&#178;","&#179;","&#180;","&#181;","&#182;","&#183;","&#184;","&#185;","&#186;","&#187;","&#188;","&#189;","&#190;","&#191;","&#192;","&#193;","&#194;","&#195;","&#196;","&#197;","&#198;","&#199;","&#200;","&#201;","&#202;","&#203;","&#204;","&#205;","&#206;","&#207;","&#208;","&#209;","&#210;","&#211;","&#212;","&#213;","&#214;","&#215;","&#216;","&#217;","&#218;","&#219;","&#220;","&#221;","&#222;","&#223;","&#224;","&#225;","&#226;","&#227;","&#228;","&#229;","&#230;","&#231;","&#232;","&#233;","&#234;","&#235;","&#236;","&#237;","&#238;","&#239;","&#240;","&#241;","&#242;","&#243;","&#244;","&#245;","&#246;","&#247;","&#248;","&#249;","&#250;","&#251;","&#252;","&#253;","&#254;","&#255;","&#8364;"  );
@@ -350,4 +364,73 @@ abstract class Piwik_DataTable_Renderer
 		$this->idSite = $idSite;
 	}
 	
+	/**
+	 * Returns true if an array should be wrapped before rendering. This is used to
+	 * mimic quirks in the old rendering logic (for backwards compatibility). The
+	 * specific meaning of 'wrap' is left up to the Renderer. For XML, this means a
+	 * new <row> node. For JSON, this means wrapping in an array.
+	 * 
+	 * In the old code, arrays were added to new DataTable instances, and then rendered.
+	 * This transformation wrapped associative arrays except under certain circumstances,
+	 * including:
+	 *  - single element (ie, array('nb_visits' => 0))   (not wrapped for some renderers)
+	 *  - empty array (ie, array())
+	 *  - array w/ arrays/DataTable instances as values (ie,
+	 *			array('name' => 'myreport',
+	 *				  'reportData' => new Piwik_DataTable())
+	 * 		OR  array('name' => 'myreport',
+	 *				  'reportData' => array(...)) )
+	 * 
+	 * @param array $array
+	 * @param bool $wrapSingleValues Whether to wrap array('key' => 'value') arrays. Some
+	 *                               renderers wrap them and some don't.
+	 * @param bool|null $isAssociativeArray Whether the array is associative or not.
+	 *                                      If null, it is determined.
+	 * @return bool
+	 */
+	protected static function shouldWrapArrayBeforeRendering(
+		$array, $wrapSingleValues = true, $isAssociativeArray = null )
+	{
+		if (empty($array))
+		{
+			return false;
+		}
+		
+		if ($isAssociativeArray === null)
+		{
+			$isAssociativeArray = Piwik::isAssociativeArray($array);
+		}
+		
+		$wrap = true;
+		if ($isAssociativeArray)
+		{
+			// we don't wrap if the array has one element that is a value
+			$firstValue = reset($array);
+			if (!$wrapSingleValues
+				&& count($array) === 1
+				&& (!is_array($firstValue)
+					&& !is_object($firstValue)))
+			{
+				$wrap = false;
+			}
+			else
+			{
+				foreach ($array as $value)
+				{
+					if (is_array($value)
+						|| is_object($value))
+					{
+						$wrap = false;
+						break;
+					}
+				}
+			}
+		}
+		else
+		{
+			$wrap = false;
+		}
+		
+		return $wrap;
+	}
 }

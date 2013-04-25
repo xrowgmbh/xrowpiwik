@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Segment.php 6980 2012-09-13 02:22:04Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -264,8 +263,9 @@ class Piwik_Segment
     		if (is_array($table))
     		{
     			// join condition provided
+				$alias = isset($table['tableAlias']) ? $table['tableAlias'] : $table['table'];
     			$sql .= "
-				LEFT JOIN ".Piwik_Common::prefixTable($table['table'])." AS ".$table['table']
+				LEFT JOIN ".Piwik_Common::prefixTable($table['table'])." AS ".$alias
     			." ON ".$table['joinOn'];
     			continue;
     		}

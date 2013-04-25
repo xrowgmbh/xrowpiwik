@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6772 2012-08-15 16:53:17Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Proxy
@@ -128,19 +127,27 @@ class Piwik_Proxy_Controller extends Piwik_Controller
 
 		// validate referrer
 		$referrer = Piwik_Url::getReferer();
-		if(!empty($referrer) && !Piwik_Url::isLocalUrl($referrer))
+		if(empty($referrer) || !Piwik_Url::isLocalUrl($referrer))
 		{
-			die('Invalid Referer detected - check that your browser sends the Referer header. <br/>The link you would have been redirected to is: '.$url);
+			die('Invalid Referer detected - This means that your web browser is not sending the "Referer URL" which is
+				required to proceed with the redirect. Verify your browser settings and add-ons, to check why your browser
+				 is not sending this referer.
+
+				<br/><br/>You can access the page at: '. $url);
 		}
 
 		// mask visits to *.piwik.org
-		if(self::isPiwikUrl($url))
+		if (!self::isPiwikUrl($url))
 		{
-			echo
-'<html><head>
-<meta http-equiv="refresh" content="0;url=' . $url . '" />
-</head></html>';
+			Piwik::checkUserHasSomeViewAccess();
 		}
+		if(!Piwik_Common::isLookLikeUrl($url))
+		{
+			die('Please check the &url= parameter: it should to be a valid URL');
+		}
+		@header('Content-Type: text/html; charset=utf-8');
+		echo '<html><head><meta http-equiv="refresh" content="0;url=' . $url . '" /></head></html>';
+		
 		exit;
 	}
 

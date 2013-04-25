@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Referers.php 6918 2012-09-04 21:44:26Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_Referers
@@ -75,7 +74,15 @@ class Piwik_Referers extends Piwik_Plugin
         							array('<br />', '&quot;'.Piwik_Translate('Referers_SubmenuCampaigns').'&quot;')),
         			'order' => 1,
         		),
-        		
+				array(
+					'category'  => Piwik_Translate('Referers_Referers'),
+					'name'   => Piwik_Translate('Referers_WidgetGetAll'),
+					'module' => 'Referers',
+					'action' => 'getAll',
+					'dimension' => Piwik_Translate('Referers_Referrer'),
+					'documentation' => Piwik_Translate('Referers_AllReferersReportDocumentation', '<br />'),
+					'order' => 2,
+				),
         		array(
         			'category' => Piwik_Translate('Referers_Referers'),
         			'name'   => Piwik_Translate('Referers_Keywords'),
@@ -84,7 +91,6 @@ class Piwik_Referers extends Piwik_Plugin
 					'actionToLoadSubTables' => 'getSearchEnginesFromKeywordId',
         			'dimension' => Piwik_Translate('Referers_ColumnKeyword'),
         			'documentation' => Piwik_Translate('Referers_KeywordsReportDocumentation', '<br />'),
-        			'actionToLoadSubTables' => 'getSearchEnginesFromKeywordId',
         			'order' => 3,
         		),
 				array( // subtable report
@@ -162,6 +168,16 @@ class Piwik_Referers extends Piwik_Plugin
 					'isSubtableReport' => true,
 					'order' => 10,
 				),
+				array(
+					'category'  => Piwik_Translate('Referers_Referers'),
+					'name'   => Piwik_Translate('Referers_Socials'),
+					'module' => 'Referers',
+					'action' => 'getSocials',
+					'actionToLoadSubTables' => 'getUrlsForSocial',
+					'dimension' => Piwik_Translate('Referers_ColumnSocial'),
+					'documentation' => Piwik_Translate('Referers_WebsitesReportDocumentation', '<br />'),
+					'order' => 11,
+				),
     	));
 	}
 
@@ -213,12 +229,14 @@ class Piwik_Referers extends Piwik_Plugin
 	{
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetKeywords', 'Referers', 'getKeywords');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetExternalWebsites', 'Referers', 'getWebsites');
+		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetSocials', 'Referers', 'getSocials');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetSearchEngines', 'Referers', 'getSearchEngines');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetCampaigns', 'Referers', 'getCampaigns');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetOverview', 'Referers', 'getRefererType');
+		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetGetAll', 'Referers', 'getAll');
 		if(Piwik_Archive::isSegmentationEnabled())
 		{
-    		Piwik_AddWidget( 'SEO', 'Top Keywords for Page URL', 'Referers', 'getKeywordsForPage');
+    		Piwik_AddWidget( 'SEO', 'Referers_WidgetTopKeywordsForPages', 'Referers', 'getKeywordsForPage');
 		}
 	}
 	
@@ -399,7 +417,7 @@ class Piwik_Referers extends Piwik_Plugin
 	 * @throws Exception
 	 * @return void
 	 */
-	protected function archiveDayAggregateVisits(Piwik_ArchiveProcessing $archiveProcessing)
+	protected function archiveDayAggregateVisits(Piwik_ArchiveProcessing_Day $archiveProcessing)
 	{
 	    $dimension = array("referer_type", "referer_name", "referer_keyword", "referer_url");
 	    $query = $archiveProcessing->queryVisitsByDimension($dimension);

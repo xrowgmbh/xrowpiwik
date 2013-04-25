@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: MultiRowEvolution.php 6117 2012-03-26 11:00:54Z EZdesign $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -18,10 +17,11 @@
 class Piwik_CoreHome_DataTableRowAction_MultiRowEvolution
 		extends Piwik_CoreHome_DataTableRowAction_RowEvolution
 {
+	const IS_MULTI_EVOLUTION_PARAM = 'is_multi_evolution';
 	
 	/** The requested metric */
 	protected $metric;
-	
+
 	/** Show all metrics in the evolution graph when the popover opens */
 	protected $initiallyShowAllMetrics = true;
 	
@@ -71,4 +71,15 @@ class Piwik_CoreHome_DataTableRowAction_MultiRowEvolution
 		return parent::renderPopover($controller, $view);
 	}
 	
+	/**
+	 * Generic method to get an evolution graph or a sparkline for the row evolution popover.
+	 * Do as much as possible from outside the controller.
+	 * @return Piwik_ViewDataTable
+	 */
+	public function getRowEvolutionGraph()
+	{
+		$view = parent::getRowEvolutionGraph();
+		$view->setCustomParameter(self::IS_MULTI_EVOLUTION_PARAM, true);
+		return $view;
+	}
 }

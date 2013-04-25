@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Currencies.php 4596 2011-04-29 05:12:23Z vipsoft $
  *
  * @category Piwik
  * @package DataFiles

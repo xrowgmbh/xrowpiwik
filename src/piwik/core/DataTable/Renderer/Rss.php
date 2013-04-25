@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Rss.php 6452 2012-06-03 00:19:51Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -39,7 +38,7 @@ class Piwik_DataTable_Renderer_Rss extends Piwik_DataTable_Renderer
 	function renderException()
 	{
 		header('Content-type: text/plain');
-		$exceptionMessage = self::renderHtmlEntities($this->exception->getMessage());
+		$exceptionMessage = $this->getExceptionMessage();
 		return 'Error: '.$exceptionMessage;
 	}
 

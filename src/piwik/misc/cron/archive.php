@@ -90,7 +90,9 @@ class Archiving
 	 * It will be overwritten by the number of days since last archiving ran until completion.
 	 */
 	const DEFAULT_DATE_LAST = 52;
-	
+	// Since weeks are not used in yearly archives, we make sure that all possible weeks are processed
+	const DEFAULT_DATE_LAST_WEEKS = 520;
+
 	protected $timeLastCompleted = false;
 	protected $requestPrepend = '&trigger=archivephp';
 	protected $errors = array();
@@ -108,12 +110,12 @@ class Archiving
 		
 		$this->logSection("INIT");
 		$this->log("Querying Piwik API at: {$this->piwikUrl}");		
-		$this->log("Running as Super User: " . $this->login);
+		$this->log("Running Piwik ". Piwik_Version::VERSION ." as Super User: " . $this->login);
 		
 		$this->acceptInvalidSSLCertificate = $this->isParameterSet("accept-invalid-ssl-certificate");
 		
 		// Test the specified piwik URL is valid
-		$response = $this->request("?module=API&method=API.getDefaultMetricTranslations&format=php");
+		$response = $this->request("?module=API&method=API.getDefaultMetricTranslations&format=original&serialize=1");
 		$responseUnserialized = @unserialize($response);
 		if($response === false
 			|| !is_array($responseUnserialized))
@@ -155,6 +157,10 @@ class Archiving
 		if(empty($lastTimestampWebsiteProcessed))
 		{
 			$dateLast = self::DEFAULT_DATE_LAST;
+			if($period == 'week')
+			{
+				$dateLast = self::DEFAULT_DATE_LAST_WEEKS;
+			}
 		}
 		else
 		{
@@ -223,11 +229,12 @@ class Archiving
 				// 2) OR always if script never executed for this website before
 		    	$shouldArchivePeriods = true;
 		    }
-		    
+
+
 		    // (*) If the website is archived because it is a new day in its timezone
 		    // We make sure all periods are archived, even if there is 0 visit today
-		    if(!$shouldArchivePeriods
-		    	&& in_array($idsite, $this->websiteDayHasFinishedSinceLastRun))
+			$dayHasEndedMustReprocess = in_array($idsite, $this->websiteDayHasFinishedSinceLastRun);
+		    if($dayHasEndedMustReprocess)
 		    {
 		    	$shouldArchivePeriods = true;
 		    }
@@ -239,12 +246,12 @@ class Archiving
 		    {
 		    	$shouldArchivePeriods = true;
 		    }
-		    
+
 		    // Test if we should process this website at all
-		    
 		    $elapsedSinceLastArchiving = time() - $lastTimestampWebsiteProcessedDay;
-		    if(!$shouldArchivePeriods
-		    	&& $elapsedSinceLastArchiving < $this->todayArchiveTimeToLive) 
+		    if(    !$websiteIsOldDataInvalidate // Invalidate old website forces the archiving for this site
+			    && !$dayHasEndedMustReprocess   // Also reprocess when day has ended since last run
+			    && $elapsedSinceLastArchiving < $this->todayArchiveTimeToLive)
 		    {
 		    	$this->log("Skipped website id $idsite, already processed today's report in recent run, "
 					.Piwik::getPrettyTimeFromSeconds($elapsedSinceLastArchiving, true, $isHtml = false)
@@ -261,11 +268,11 @@ class Archiving
 		    $url = $this->getVisitsRequestUrl($idsite, "day",
 			    				// when some data was purged from this website
 			    				// we make sure we query all previous days/weeks/months
-		    				$websiteIsOldDataInvalidate
+		    				($websiteIsOldDataInvalidate
 								// when --force-all-websites option, 
 								// also forces to archive last52 days to be safe
-							|| $this->shouldArchiveAllWebsites 
-								? false 
+							|| $this->shouldArchiveAllWebsites)
+								? false
 								: $lastTimestampWebsiteProcessedDay
 			);
 		    $content = $this->request($url);
@@ -322,11 +329,10 @@ class Archiving
 					Piwik_SetOption( $this->lastRunKey($idsite, "periods"), time() );
 					
 					// Remove this website from the list of websites to be invalidated
-					// since it now just been re-processing the reports, job is done!
-					if( in_array($idsite, $this->idSitesInvalidatedOldReports ) )
+					// since it's now just been re-processing the reports, job is done!
+					if( $websiteIsOldDataInvalidate )
 					{
 						$websiteIdsInvalidated = Piwik_CoreAdminHome_API::getWebsiteIdsToInvalidate();
-						
 						if(count($websiteIdsInvalidated))
 						{
 							$found = array_search($idsite, $websiteIdsInvalidated);
@@ -339,21 +345,18 @@ class Archiving
 						}
 					}
 				}
-				$archivedPeriodsArchivesWebsite++;
 			}
-			else
-			{
-				$skippedPeriodsArchivesWebsite++;
-			}
+			$archivedPeriodsArchivesWebsite++;
+
 			$requestsWebsite = $this->requests - $requestsBefore;
-			
 			$debug = $this->shouldArchiveAllWebsites ? ", last days = $visitsAllDays visits" : "";
 			Piwik::log("Archived website id = $idsite, today = $visitsToday visits"
-							.$debug.", $requestsWebsite API requests, "
-							. $timerWebsite->__toString() 
-							." [" . ($websitesWithVisitsSinceLastRun+$skipped) . "/" 
-							. count($this->websites) 
-							. " done]" );
+				.$debug.", $requestsWebsite API requests, "
+				. $timerWebsite->__toString()
+				." [" . ($websitesWithVisitsSinceLastRun+$skipped) . "/"
+				. count($this->websites)
+				. " done]" );
+
 		}
 		
 		$this->log("Done archiving!");
@@ -395,7 +398,7 @@ class Archiving
 		$this->log($tasksOutput);
 		$this->log("done");
 	}
-	
+
 	/**
 	 * @return bool True on success, false if some request failed
 	 */
@@ -403,70 +406,87 @@ class Archiving
 	{
 		$timer = new Piwik_Timer;
 	    $aCurl = array();
-		$mh = curl_multi_init();
+		$mh = false;
 		$url = $this->piwikUrl . $this->getVisitsRequestUrl($idsite, $period, $lastTimestampWebsiteProcessed) . $this->requestPrepend;
 		
 	    // already processed above for "day"
 	    if($period != "day")
 	    {
-			$ch = curl_init($url);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			
-			if($this->acceptInvalidSSLCertificate)
-			{
-				curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, false); 
-				curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, false); 
-			}
-			
-			curl_multi_add_handle($mh, $ch);
+		    $ch = $this->getNewCurlHandle($url);
+            $this->addCurlHandleToMulti($mh, $ch);
 			$aCurl[$url] = $ch;
 			$this->requests++;
 	    }
 	    $urlNoSegment = $url;
 	    foreach ($this->segments as $segment) {
 	    	$segmentUrl = $url.'&segment='.urlencode($segment);
-			$ch = curl_init($segmentUrl);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			curl_multi_add_handle($mh, $ch);
+		    $ch = $this->getNewCurlHandle($segmentUrl);
+            $this->addCurlHandleToMulti($mh, $ch);
 			$aCurl[$segmentUrl] = $ch;
 			$this->requests++;
 	    }
-	    $running=null;
-	    do {
-			usleep(10000);
-			curl_multi_exec($mh,$running);
-	    } while ($running > 0);
-	
-	    $success = true;
-	    $visitsAllDaysInPeriod = false;
-        foreach($aCurl as $url => $ch){
-        	$content = curl_multi_getcontent($ch);
-        	$sucessResponse = $this->checkResponse($content, $url);
-            $success = $sucessResponse && $success;
-            if($url == $urlNoSegment
-            	&& $sucessResponse)
-            {
-            	$stats = unserialize($content);
-            	if(!is_array($stats))
-            	{
-            		$this->logError("Error unserializing the following response: " . $content);
-            	}
-            	$visitsAllDaysInPeriod = @array_sum($stats);
+
+        $success = true;
+        $visitsAllDaysInPeriod = false;
+
+        if(!empty($aCurl)) {
+            $running=null;
+            do {
+                usleep(10000);
+                curl_multi_exec($mh, $running);
+            } while ($running > 0);
+
+            foreach($aCurl as $url => $ch){
+                $content = curl_multi_getcontent($ch);
+                $successResponse = $this->checkResponse($content, $url);
+                $success = $successResponse && $success;
+                if($url == $urlNoSegment
+                    && $successResponse)
+                {
+                    $stats = unserialize($content);
+                    if(!is_array($stats))
+                    {
+                        $this->logError("Error unserializing the following response: " . $content);
+                    }
+                    $visitsAllDaysInPeriod = @array_sum($stats);
+                }
             }
+
+            foreach ($aCurl as $ch) {
+                curl_multi_remove_handle($mh, $ch);
+            }
+            curl_multi_close($mh);
         }
 
-	    foreach ($aCurl as $ch) {
-	    	curl_multi_remove_handle($mh, $ch);
-	    }
-	    curl_multi_close($mh);
-	    
 		$this->log("Archived website id = $idsite, period = $period, "
 					. ($period != "day" ? (int)$visitsAllDaysInPeriod. " visits, " : "" )
                     . (!empty($timerWebsite) ? $timerWebsite->__toString() : $timer->__toString()));
 	    return $success;
 	}
-	
-	
+
+    private function addCurlHandleToMulti(&$mh, $ch)
+    {
+        if (!$mh) {
+            $mh = curl_multi_init();
+        }
+        curl_multi_add_handle($mh, $ch);
+    }
+
+    private function getNewCurlHandle($url)
+	{
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+		if ($this->acceptInvalidSSLCertificate) {
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		}
+		curl_setopt($ch, CURLOPT_USERAGENT, Piwik_Http::getUserAgent());
+		Piwik_Http::configCurlCertificate($ch);
+		return $ch;
+	}
+
+
 	/**
 	 * Logs a section in the output
 	 */
@@ -484,7 +504,7 @@ class Archiving
 		// How to test the error handling code?
 		// - Generate some hits since last archive.php run
 		// - Start the script, in the middle, shutdown apache, then restore
-		// Some errors should be logged and script should succesfully finish and then report the errors and trigger a PHP error
+		// Some errors should be logged and script should successfully finish and then report the errors and trigger a PHP error
 		if(!empty($this->errors))
 		{
 			$this->logSection("SUMMARY OF ERRORS");
@@ -500,7 +520,7 @@ class Archiving
 		}
 		else
 		{
-			// No error -> Logs the succesful script execution until completion
+			// No error -> Logs the successful script execution until completion
 			Piwik_SetOption(self::OPTION_ARCHIVING_FINISHED_TS, time());
 		}
 	}
@@ -725,7 +745,7 @@ class Archiving
 			$prettySeconds = Piwik::getPrettyTimeFromSeconds(	empty($this->timeLastCompleted)
 																	? $this->firstRunActiveWebsitesWithTraffic
 																	: (time() - $this->timeLastCompleted), 
-																true, false); 
+																true, false);
 			$this->log("Will process ". count($this->websites). " websites with new visits since " 
 							. $prettySeconds 
 							. " " 
@@ -751,13 +771,13 @@ class Archiving
 			{
 				$processedDateInTz = Piwik_Date::factory((int)$timestampActiveTraffic, $timezone);
 				$currentDateInTz = Piwik_Date::factory('now', $timezone);
-				
+
 				if($processedDateInTz->toString() != $currentDateInTz->toString() )
 				{
 					$timezoneToProcess[] = $timezone;
 				}
 			}
-			
+
 			$websiteDayHasFinishedSinceLastRun = Piwik_SitesManager_API::getInstance()->getSitesIdFromTimezones($timezoneToProcess);
 			$websiteDayHasFinishedSinceLastRun = array_diff($websiteDayHasFinishedSinceLastRun, $this->websites);
 			$this->websiteDayHasFinishedSinceLastRun = $websiteDayHasFinishedSinceLastRun;
@@ -768,8 +788,6 @@ class Archiving
 				
 				$this->websites = array_merge($this->websites, $websiteDayHasFinishedSinceLastRun);
 			}
-
-			
 		}
 	}
 

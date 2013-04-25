@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Common.php 6954 2012-09-09 21:00:44Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -102,248 +101,16 @@ class Piwik_Common
 		{
 			return $table;
 		}
-		return str_replace($prefixTable, '', $table, $count = 1);
+		$count = 1;
+		return str_replace($prefixTable, '', $table, $count);
 	}
 
 /*
  * Tracker
  */
-
-	static public $initTrackerMode = false;
-	static protected function initCorePiwikInTrackerMode()
-	{
-		if(!empty($GLOBALS['PIWIK_TRACKER_MODE'])
-			&& self::$initTrackerMode === false)
-		{
-			self::$initTrackerMode = true;
-			require_once PIWIK_INCLUDE_PATH . '/core/Loader.php';
-			require_once PIWIK_INCLUDE_PATH . '/core/Translate.php';
-			require_once PIWIK_INCLUDE_PATH . '/core/Option.php';
-			try {
-				$access = Zend_Registry::get('access');
-			} catch (Exception $e) {
-				Piwik::createAccessObject();
-			}
-			try {
-				$config = Piwik_Config::getInstance();
-			} catch (Exception $e) {
-				Piwik::createConfigObject();
-			}
-			try {
-				$db = Zend_Registry::get('db');
-			} catch (Exception $e) {
-				Piwik::createDatabaseObject();
-			}
-
-			$pluginsManager = Piwik_PluginsManager::getInstance();
-			$pluginsToLoad = Piwik_Config::getInstance()->Plugins['Plugins'];
-			$pluginsForcedNotToLoad = Piwik_Tracker::getPluginsNotToLoad();
-			$pluginsToLoad = array_diff($pluginsToLoad, $pluginsForcedNotToLoad);
-			$pluginsManager->loadPlugins( $pluginsToLoad );
-		}
-	}
-
 	static public function isGoalPluginEnabled()
 	{
 		return Piwik_PluginsManager::getInstance()->isPluginActivated('Goals');
-	}
-	
-/*
- * File-based Cache
- */
-
-	/**
-	 * @var Piwik_CacheFile
-	 */
-	static $trackerCache = null;
-	static protected function getTrackerCache()
-	{
-		if(is_null(self::$trackerCache))
-		{
-			self::$trackerCache = new Piwik_CacheFile('tracker');
-		}
-		return self::$trackerCache;
-	}
-
-	/**
-	 * Returns array containing data about the website: goals, URLs, etc.
-	 *
-	 * @param int  $idSite
-	 * @return array
-	 */
-	static function getCacheWebsiteAttributes( $idSite )
-	{
-		$idSite = (int)$idSite;
-		
-		$cache = self::getTrackerCache();
-		if(($cacheContent = $cache->get($idSite)) !== false)
-		{
-			return $cacheContent;
-		}
-
-		self::initCorePiwikInTrackerMode();
-
-		// save current user privilege and temporarily assume super user privilege
-		$isSuperUser = Piwik::isUserIsSuperUser();
-		Piwik::setUserIsSuperUser();
-
-		$content = array();
-		Piwik_PostEvent('Common.fetchWebsiteAttributes', $content, $idSite);
-
-		// restore original user privilege
-		Piwik::setUserIsSuperUser($isSuperUser);
-
-		// if nothing is returned from the plugins, we don't save the content
-		// this is not expected: all websites are expected to have at least one URL
-		if(!empty($content))
-		{
-			$cache->set($idSite, $content);
-		}
-		return $content;
-	}
-
-	/**
-	 * Clear general (global) cache
-	 */
-	static public function clearCacheGeneral()
-	{
-		self::getTrackerCache()->delete('general');
-	}
-
-	/**
-	 * Returns contents of general (global) cache
-	 *
-	 * @return array
-	 */
-	static protected function getCacheGeneral()
-	{
-		$cache = self::getTrackerCache();
-		$cacheId = 'general';
-		$expectedRows = 2;
-		if(($cacheContent = $cache->get($cacheId)) !== false
-			&& count($cacheContent) == $expectedRows)
-		{
-			return $cacheContent;
-		}
-		self::initCorePiwikInTrackerMode();
-		$cacheContent = array (
-			'isBrowserTriggerArchivingEnabled' => Piwik_ArchiveProcessing::isBrowserTriggerArchivingEnabled(),
-			'lastTrackerCronRun' => Piwik_GetOption('lastTrackerCronRun')
-		);
-		return $cacheContent;
-	}
-
-	/**
-	 * Store data in general (global cache)
-	 *
-	 * @param mixed  $value
-	 * @return bool
-	 */
-	static protected function setCacheGeneral($value)
-	{
-		$cache = self::getTrackerCache();
-		$cacheId = 'general';
-		$cache->set($cacheId, $value);
-		return true;
-	}
-
-	/**
-	 * Regenerate Tracker cache files
-	 *
-	 * @param array  $idSites  Array of idSites to clear cache for
-	 */
-	static public function regenerateCacheWebsiteAttributes($idSites = array())
-	{
-		if(!is_array($idSites))
-		{
-			$idSites = array( $idSites );
-		}
-		foreach($idSites as $idSite) {
-			self::deleteCacheWebsiteAttributes($idSite);
-			self::getCacheWebsiteAttributes($idSite);
-		}
-	}
-
-	/**
-	 * Delete existing Tracker cache
-	 *
-	 * @param string  $idSite  (website ID of the site to clear cache for
-	 */
-	static public function deleteCacheWebsiteAttributes( $idSite )
-	{
-		$idSite = (int)$idSite;
-		$cache = new Piwik_CacheFile('tracker');
-		$cache->delete($idSite);
-	}
-
-	/**
-	 * Deletes all Tracker cache files
-	 */
-	static public function deleteTrackerCache()
-	{
-		$cache = new Piwik_CacheFile('tracker');
-		$cache->deleteAll();
-	}
-
-	/**
-	 * Tracker requests will automatically trigger the Scheduled tasks.
-	 * This is useful for users who don't setup the cron,
-	 * but still want daily/weekly/monthly PDF reports emailed automatically.
-	 *
-	 * This is similar to calling the API CoreAdminHome.runScheduledTasks (see misc/cron/archive.sh)
-	 *
-	 * @param int  $now  Current timestamp
-	 */
-	public static function runScheduledTasks($now)
-	{
-		// Currently, there is no hourly tasks. When there are some,
-		// this could be too agressive minimum interval (some hours would be skipped in case of low traffic)
-		$minimumInterval = Piwik_Config::getInstance()->Tracker['scheduled_tasks_min_interval'];
-
-		// If the user disabled browser archiving, he has already setup a cron
-		// To avoid parallel requests triggering the Scheduled Tasks,
-		// Get last time tasks started executing
-		$cache = Piwik_Common::getCacheGeneral();
-		if($minimumInterval <= 0
-			|| empty($cache['isBrowserTriggerArchivingEnabled']))
-		{
-			printDebug("-> Scheduled tasks not running in Tracker: Browser archiving is disabled.");
-			return;
-		}
-		$nextRunTime = $cache['lastTrackerCronRun'] + $minimumInterval;
-		if(	(isset($GLOBALS['PIWIK_TRACKER_DEBUG_FORCE_SCHEDULED_TASKS']) && $GLOBALS['PIWIK_TRACKER_DEBUG_FORCE_SCHEDULED_TASKS'])
-			|| $cache['lastTrackerCronRun'] === false
-			|| $nextRunTime < $now )
-		{
-			$cache['lastTrackerCronRun'] = $now;
-			Piwik_Common::setCacheGeneral( $cache );
-			Piwik_Common::initCorePiwikInTrackerMode();
-			Piwik_SetOption('lastTrackerCronRun', $cache['lastTrackerCronRun']);
-			printDebug('-> Scheduled Tasks: Starting...');
-
-			// save current user privilege and temporarily assume super user privilege
-			$isSuperUser = Piwik::isUserIsSuperUser();
-
-			// Scheduled tasks assume Super User is running
-			Piwik::setUserIsSuperUser();
-
-			// While each plugins should ensure that necessary languages are loaded,
-			// we ensure English translations at least are loaded
-			Piwik_Translate::getInstance()->loadEnglishTranslation();
-
-			$resultTasks = Piwik_TaskScheduler::runTasks();
-
-			// restore original user privilege
-			Piwik::setUserIsSuperUser($isSuperUser);
-
-			printDebug($resultTasks);
-			printDebug('Finished Scheduled Tasks.');
-		}
-		else
-		{
-			printDebug("-> Scheduled tasks not triggered.");
-		}
-		printDebug("Next run will be from: ". date('Y-m-d H:i:s', $nextRunTime) .' UTC');
 	}
 
 /*
@@ -405,7 +172,6 @@ class Piwik_Common
 		{
 			$urlQuery = substr($urlQuery, 1);
 		}
-
 		$separator = '&';
 
 		$urlQuery = $separator . $urlQuery;
@@ -770,7 +536,6 @@ class Piwik_Common
 	static public function sanitizeInputValue($value)
 	{
 		// $_GET and $_REQUEST already urldecode()'d
-
 		// decode
 		// note: before php 5.2.7, htmlspecialchars() double encodes &#x hex items
 		$value = html_entity_decode($value, Piwik_Common::HTML_ENCODING_QUOTE_STYLE, 'UTF-8');
@@ -880,7 +645,7 @@ class Piwik_Common
 		{
 			if( is_null($varDefault))
 			{
-				throw new Exception("The parameter '$varName' isn't set in the Request, and a default value wasn't provided.");
+				throw new Exception("The parameter '$varName' isn't set in the Request, and a default value wasn't provided." );
 			}
 			else
 			{
@@ -1333,7 +1098,7 @@ class Piwik_Common
 			return strtolower($country);
 		}
 
-		if(empty($lang) || strlen($lang) < 2)
+		if(empty($lang) || strlen($lang) < 2 || $lang == 'xx')
 		{
 			return 'xx';
 		}
@@ -1397,7 +1162,7 @@ class Piwik_Common
 			{
 				if(count($parts) == 3)
 				{
-					// match locale (langauge and location)
+					// match locale (language and location)
 					if(in_array($parts[1].$parts[2], $validLanguages))
 					{
 						return $parts[1].$parts[2];
@@ -1905,6 +1670,18 @@ class Piwik_Common
 			header($header, $replace);
 		}
 	}
+	
+	/**
+	 * Returns the ID of the current LocationProvider (see UserCountry plugin code) from
+	 * the Tracker cache.
+	 */
+	public static function getCurrentLocationProviderId()
+	{
+		$cache = Piwik_Tracker_Cache::getCacheGeneral();
+		return empty($cache['currentLocationProviderId'])
+			  ? Piwik_UserCountry_LocationProvider_Default::ID
+			  : $cache['currentLocationProviderId'];
+	}
 }
 
 /**
@@ -1918,4 +1695,24 @@ function destroy(&$var)
 	if (is_object($var)) $var->__destruct();
 	unset($var);
 	$var = null;
+}
+
+if(!function_exists('printDebug'))
+{
+	function printDebug( $info = '' )
+	{
+		if(isset($GLOBALS['PIWIK_TRACKER_DEBUG']) && $GLOBALS['PIWIK_TRACKER_DEBUG'])
+		{
+			if(is_array($info))
+			{
+				print("<pre>");
+				print(htmlspecialchars(var_export($info,true), ENT_QUOTES));
+				print("</pre>");
+			}
+			else
+			{
+				print(htmlspecialchars($info, ENT_QUOTES) . "<br />\n");
+			}
+		}
+	}
 }

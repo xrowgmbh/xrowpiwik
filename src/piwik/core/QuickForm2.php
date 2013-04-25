@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: QuickForm2.php 6900 2012-09-02 11:14:40Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik

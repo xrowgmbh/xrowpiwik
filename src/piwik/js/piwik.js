@@ -4,7 +4,7 @@
  * JavaScript tracking client
  *
  * @link http://piwik.org
- * @source http://dev.piwik.org/trac/browser/trunk/js/piwik.js
+ * @source https://github.com/piwik/piwik/blob/master/js/piwik.js
  * @license http://www.opensource.org/licenses/bsd-license.php Simplified BSD
  */
 
@@ -105,8 +105,10 @@ if (!this.JSON2) {
 // sequences.
 
         escapable.lastIndex = 0;
+
         return escapable.test(string) ? '"' + string.replace(escapable, function (a) {
             var c = meta[a];
+
             return typeof c === 'string' ? c :
                     '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
         }) + '"' : '"' + string + '"';
@@ -194,6 +196,7 @@ if (!this.JSON2) {
                         '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' :
                         '[' + partial.join(',') + ']';
                 gap = mind;
+
                 return v;
             }
 
@@ -205,6 +208,7 @@ if (!this.JSON2) {
                     if (typeof rep[i] === 'string') {
                         k = rep[i];
                         v = str(k, value);
+
                         if (v) {
                             partial.push(quote(k) + (gap ? ': ' : ':') + v);
                         }
@@ -217,6 +221,7 @@ if (!this.JSON2) {
                 for (k in value) {
                     if (Object.prototype.hasOwnProperty.call(value, k)) {
                         v = str(k, value);
+
                         if (v) {
                             partial.push(quote(k) + (gap ? ': ' : ':') + v);
                         }
@@ -231,6 +236,7 @@ if (!this.JSON2) {
                     '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' :
                     '{' + partial.join(',') + '}';
             gap = mind;
+
             return v;
         }
     }
@@ -268,6 +274,7 @@ if (!this.JSON2) {
 // Otherwise, throw an error.
 
             rep = replacer;
+
             if (replacer && typeof replacer !== 'function' &&
                     (typeof replacer !== 'object' ||
                     typeof replacer.length !== 'number')) {
@@ -297,10 +304,12 @@ if (!this.JSON2) {
 // that modifications can be made.
 
                 var k, v, value = holder[key];
+
                 if (value && typeof value === 'object') {
                     for (k in value) {
                         if (Object.prototype.hasOwnProperty.call(value, k)) {
                             v = walk(value, k);
+
                             if (v !== undefined) {
                                 value[k] = v;
                             } else {
@@ -309,6 +318,7 @@ if (!this.JSON2) {
                         }
                     }
                 }
+
                 return reviver.call(holder, key, value);
             }
 
@@ -318,6 +328,7 @@ if (!this.JSON2) {
 
             text = String(text);
             cx.lastIndex = 0;
+
             if (cx.test(text)) {
                 text = text.replace(cx, function (a) {
                     return '\\u' +
@@ -372,21 +383,23 @@ if (!this.JSON2) {
 /*global unescape */
 /*global ActiveXObject */
 /*global _paq:true */
+/*global Piwik_Overlay_Client */
 /*members encodeURIComponent, decodeURIComponent, getElementsByTagName,
     shift, unshift,
+    createElement, appendChild, characterSet, charset,
     addEventListener, attachEvent, removeEventListener, detachEvent, disableCookies,
     cookie, domain, readyState, documentElement, doScroll, title, text,
-    location, top, document, referrer, parent, links, href, protocol, GearsFactory,
+    location, top, document, referrer, parent, links, href, protocol, name, GearsFactory,
     event, which, button, srcElement, type, target,
     parentNode, tagName, hostname, className,
     userAgent, cookieEnabled, platform, mimeTypes, enabledPlugin, javaEnabled,
     XMLHttpRequest, ActiveXObject, open, setRequestHeader, onreadystatechange, send, readyState, status,
     getTime, getTimeAlias, setTime, toGMTString, getHours, getMinutes, getSeconds,
-    toLowerCase, charAt, indexOf, lastIndexOf, split, slice, toUpperCase,
+    toLowerCase, toUpperCase, charAt, indexOf, lastIndexOf, split, slice,
     onload, src,
     round, random,
     exec,
-    res, width, height,
+    res, width, height, devicePixelRatio,
     pdf, qt, realp, wma, dir, fla, java, gears, ag,
     hook, getHook, getVisitorId, getVisitorInfo, setTrackerUrl, setSiteId,
     getAttributionInfo, getAttributionCampaignName, getAttributionCampaignKeyword,
@@ -405,15 +418,17 @@ if (!this.JSON2) {
     doNotTrack, setDoNotTrack, msDoNotTrack,
     addListener, enableLinkTracking, setLinkTrackingTimer,
     setHeartBeatTimer, killFrame, redirectFile, setCountPreRendered,
-    trackGoal, trackLink, trackPageView, setEcommerceView, addEcommerceItem, trackEcommerceOrder, trackEcommerceCartUpdate,
-    addPlugin, getTracker, getAsyncTracker
+    trackGoal, trackLink, trackPageView, trackSiteSearch,
+    setEcommerceView, addEcommerceItem, trackEcommerceOrder, trackEcommerceCartUpdate,
+    addPlugin, getTracker, getAsyncTracker,
+    initialize
 */
 var
     // asynchronous tracker (or proxy)
     _paq = _paq || [],
 
     // Piwik singleton and namespace
-    Piwik =    Piwik || (function () {
+    Piwik = Piwik || (function () {
         "use strict";
 
         /************************************************************
@@ -459,7 +474,9 @@ var
          */
         function isDefined(property) {
             // workaround https://github.com/douglascrockford/JSLint/commit/24f63ada2f9d7ad65afc90e6d949f631935c2480
-            return 'undefined' !== typeof property;
+            var propertyType = typeof property;
+
+            return propertyType !== 'undefined';
         }
 
         /*
@@ -514,6 +531,7 @@ var
         function addEventListener(element, eventType, eventHandler, useCapture) {
             if (element.addEventListener) {
                 element.addEventListener(eventType, eventHandler, useCapture);
+
                 return true;
             }
 
@@ -535,6 +553,7 @@ var
             for (i in plugins) {
                 if (Object.prototype.hasOwnProperty.call(plugins, i)) {
                     pluginMethod = plugins[i][methodName];
+
                     if (isFunction(pluginMethod)) {
                         result += pluginMethod(callback);
                     }
@@ -582,6 +601,7 @@ var
                     registeredOnLoadHandlers[i]();
                 }
             }
+
             return true;
         }
 
@@ -611,6 +631,7 @@ var
                                 documentAlias.documentElement.doScroll('left');
                             } catch (error) {
                                 setTimeout(ready, 0);
+
                                 return;
                             }
                             loadHandler();
@@ -634,6 +655,31 @@ var
         }
 
         /*
+         * Load JavaScript file (asynchronously)
+         */
+        function loadScript(src, onLoad) {
+            var script = documentAlias.createElement('script');
+
+            script.type = 'text/javascript';
+            script.src = src;
+
+            if (script.readyState) {
+                script.onreadystatechange = function () {
+                    var state = this.readyState;
+
+                    if (state === 'loaded' || state === 'complete') {
+                        script.onreadystatechange = null;
+                        onLoad();
+                    }
+                };
+            } else {
+                script.onload = onLoad;
+            }
+
+            documentAlias.getElementsByTagName('head')[0].appendChild(script);
+        }
+
+        /*
          * Get page referrer
          */
         function getReferrer() {
@@ -650,6 +696,7 @@ var
                     }
                 }
             }
+
             if (referrer === '') {
                 referrer = documentAlias.referrer;
             }
@@ -702,6 +749,7 @@ var
          * sha1
          * - based on sha1 from http://phpjs.org/functions/sha1:512 (MIT / GPL v2)
          ************************************************************/
+
         function sha1(str) {
             // +   original by: Webtoolkit.info (http://www.webtoolkit.info/)
             // + namespaced by: Michael White (http://getsprink.com)
@@ -723,6 +771,7 @@ var
                         v = (val >>> (i * 4)) & 0x0f;
                         str += v.toString(16);
                     }
+
                     return str;
                 },
 
@@ -836,8 +885,10 @@ var
             }
 
             temp = cvt_hex(H0) + cvt_hex(H1) + cvt_hex(H2) + cvt_hex(H3) + cvt_hex(H4);
+
             return temp.toLowerCase();
         }
+
         /************************************************************
          * end sha1
          ************************************************************/
@@ -846,15 +897,16 @@ var
          * Fix-up URL when page rendered from search engine cache or translated page
          */
         function urlFixup(hostName, href, referrer) {
-            if (hostName === 'translate.googleusercontent.com') {        // Google
+            if (hostName === 'translate.googleusercontent.com') {       // Google
                 if (referrer === '') {
                     referrer = href;
                 }
+
                 href = getParameter(href, 'u');
                 hostName = getHostName(href);
-            } else if (hostName === 'cc.bingj.com' ||                    // Bing
+            } else if (hostName === 'cc.bingj.com' ||                   // Bing
                     hostName === 'webcache.googleusercontent.com' ||    // Google
-                    hostName.slice(0, 5) === '74.6.') {                    // Yahoo (via Inktomi 74.6.0.0/16)
+                    hostName.slice(0, 5) === '74.6.') {                 // Yahoo (via Inktomi 74.6.0.0/16)
                 href = documentAlias.links[0].href;
                 hostName = getHostName(href);
             }
@@ -894,8 +946,92 @@ var
                     title = tmp[0].text;
                 }
             }
+
             return title;
         }
+
+        /************************************************************
+         * Page Overlay
+         ************************************************************/
+
+        /*
+         * Check whether this is a page overlay session
+         *
+         * @return boolean
+         *
+         * {@internal side-effect: modifies window.name }}
+         */
+        function isOverlaySession(configTrackerUrl, configTrackerSiteId) {
+            var windowName = 'Piwik_Overlay',
+                referrer = documentAlias.referrer,
+                testReferrer = configTrackerUrl;
+
+            // remove piwik.php from referrer if present
+            if (testReferrer.slice(-9) === 'piwik.php') {
+                testReferrer = testReferrer.slice(0, testReferrer.length - 9);
+            }
+
+            // remove protocol
+            testReferrer.slice(testReferrer.slice(0, 7) === 'http://' ? 7 : 8, testReferrer.length);
+            referrer.slice(referrer.slice(0, 7) === 'http://' ? 7 : 8, referrer.length);
+
+            // do a basic match before checking with a regex because the regex is more expensive
+            // and would be used at every pageview otherwise
+            if (referrer.slice(0, testReferrer.length) === testReferrer) {
+
+                // build referrer regex to extract parameters
+                var referrerRegExp = new RegExp('^' + testReferrer
+                        + 'index\\.php\\?module=Overlay&action=startOverlaySession'
+                        + '&idsite=([0-9]+)&period=([^&]+)&date=([^&]+)$');
+
+                var match = referrerRegExp.exec(referrer);
+
+                if (match) {
+                    // check idsite
+                    var idsite = match[1];
+
+                    if (idsite !== String(configTrackerSiteId)) {
+                        return false;
+                    }
+
+                    // store overlay session info in window name
+                    var period = match[2],
+                        date = match[3];
+
+                    windowAlias.name = windowName + '###' + period + '###' + date;
+                }
+            }
+
+            // retrieve and check data from window name
+            var windowNameParts = windowAlias.name.split('###');
+
+            return windowNameParts.length === 3 && windowNameParts[0] === windowName;
+        }
+
+        /*
+         * Inject the script needed for page overlay
+         */
+        function injectOverlayScripts(configTrackerUrl, configTrackerSiteId) {
+            var windowNameParts = windowAlias.name.split('###'),
+                period = windowNameParts[1],
+                date = windowNameParts[2],
+                root = configTrackerUrl;
+
+            if (root.slice(-9) === 'piwik.php') {
+                root = root.slice(0, root.length - 9);  // remove piwik.php if present
+            }
+
+            loadScript(
+                root + 'plugins/Overlay/client/client.js?v=1',
+                function () {
+                    Piwik_Overlay_Client.initialize(root, configTrackerSiteId, period, date);
+                }
+            );
+        }
+
+        /************************************************************
+         * End Page Overlay
+         ************************************************************/
 
         /*
          * Piwik Tracker class
@@ -940,7 +1076,7 @@ var
                 configTitle = documentAlias.title,
 
                 // Extensions to be treated as download links
-                configDownloadExtensions = '7z|aac|ar[cj]|as[fx]|avi|bin|csv|deb|dmg|doc|exe|flv|gif|gz|gzip|hqx|jar|jpe?g|js|mp(2|3|4|e?g)|mov(ie)?|ms[ip]|od[bfgpst]|og[gv]|pdf|phps|png|ppt|qtm?|ra[mr]?|rpm|sea|sit|tar|t?bz2?|tgz|torrent|txt|wav|wm[av]|wpd||xls|xml|z|zip',
+                configDownloadExtensions = '7z|aac|ar[cj]|as[fx]|avi|bin|csv|deb|dmg|docx?|exe|flv|gif|gz|gzip|hqx|jar|jpe?g|js|mp(2|3|4|e?g)|mov(ie)?|ms[ip]|od[bfgpst]|og[gv]|pdf|phps|png|pptx?|qtm?|ra[mr]?|rpm|sea|sit|tar|t?bz2?|tgz|torrent|txt|wav|wm[av]|wpd||xlsx?|xml|z|zip',
 
                 // Hosts or alias(es) to not treat as outlinks
                 configHostsAlias = [domainAlias],
@@ -1006,9 +1142,6 @@ var
 
                 // Life of the referral cookie (in milliseconds)
                 configReferralCookieTimeout = 15768000000, // 6 months
-
-                // Should cookies have the secure flag set
-                cookieSecure = documentAlias.location.protocol === 'https',
 
                 // Custom Variables read from cookie, scope "visit"
                 customVariables = false,
@@ -1096,6 +1229,7 @@ var
 
                 if (configDiscardHashTag) {
                     targetPattern = new RegExp('#.*');
+
                     return url.replace(targetPattern, '');
                 }
 
@@ -1120,6 +1254,7 @@ var
                 }
 
                 baseUrl = purify(baseUrl);
+
                 if ((i = baseUrl.indexOf('?')) >= 0) {
                     baseUrl = baseUrl.slice(0, i);
                 }
@@ -1152,11 +1287,13 @@ var
                         }
 
                         offset = hostName.length - alias.length;
+
                         if ((offset > 0) && (hostName.slice(offset) === alias)) {
                             return true;
                         }
                     }
                 }
+
                 return false;
             }
 
@@ -1263,10 +1400,12 @@ var
 
                 if (cookie.length) {
                     cookie = JSON2.parse(cookie);
+
                     if (isObject(cookie)) {
                         return cookie;
                     }
                 }
+
                 return {};
             }
 
@@ -1294,7 +1433,7 @@ var
              * or when there is a new visit or a new page view
              */
             function setVisitorIdCookie(uuid, createTs, visitCount, nowTs, lastVisitTs, lastEcommerceOrderTs) {
-                setCookie(getCookieName('id'), uuid + '.' + createTs + '.' + visitCount + '.' + nowTs + '.' + lastVisitTs + '.' + lastEcommerceOrderTs, configVisitorCookieTimeout, configCookiePath, configCookieDomain, cookieSecure);
+                setCookie(getCookieName('id'), uuid + '.' + createTs + '.' + visitCount + '.' + nowTs + '.' + lastVisitTs + '.' + lastEcommerceOrderTs, configVisitorCookieTimeout, configCookiePath, configCookieDomain);
             }
 
             /*
@@ -1345,6 +1484,7 @@ var
                         ''
                     ];
                 }
+
                 return tmpContainer;
             }
 
@@ -1373,6 +1513,7 @@ var
                         // Pre 1.3, this cookie was not JSON encoded
                     }
                 }
+
                 return [
                     '',
                     '',
@@ -1446,6 +1587,15 @@ var
                     currentEcommerceOrderTs = "";
                 }
 
+                // send charset if document charset is not utf-8. sometimes encoding
+                // of urls will be the same as this and not utf-8, which will cause problems
+                // do not send charset if it is utf8 since it's assumed by default in Piwik
+                var charSet = documentAlias.characterSet || documentAlias.charset;
+
+                if (!charSet || charSet.toLowerCase() === 'utf-8') {
+                    charSet = null;
+                }
+
                 campaignNameDetected = attributionCookie[0];
                 campaignKeywordDetected = attributionCookie[1];
                 referralTs = attributionCookie[2];
@@ -1466,14 +1616,17 @@ var
                         for (i in configCampaignNameParameters) {
                             if (Object.prototype.hasOwnProperty.call(configCampaignNameParameters, i)) {
                                 campaignNameDetected = getParameter(currentUrl, configCampaignNameParameters[i]);
+
                                 if (campaignNameDetected.length) {
                                     break;
                                 }
                             }
                         }
+
                         for (i in configCampaignKeywordParameters) {
                             if (Object.prototype.hasOwnProperty.call(configCampaignKeywordParameters, i)) {
                                 campaignKeywordDetected = getParameter(currentUrl, configCampaignKeywordParameters[i]);
+
                                 if (campaignKeywordDetected.length) {
                                     break;
                                 }
@@ -1485,6 +1638,7 @@ var
                     // referral URL depends on the first or last referrer attribution
                     currentReferrerHostName = getHostName(configReferrerUrl);
                     originalReferrerHostName = referralUrl.length ? getHostName(referralUrl) : '';
+
                     if (currentReferrerHostName.length && // there is a referrer
                             !isSiteHostName(currentReferrerHostName) && // domain is not the current domain
                             (!configConversionAttributionFirstReferrer || // attribute to last known referrer
@@ -1504,7 +1658,7 @@ var
                             purify(referralUrl.slice(0, referralUrlMaxLength))
                         ];
 
-                        setCookie(refname, JSON2.stringify(attributionCookie), configReferralCookieTimeout, configCookiePath, configCookieDomain, cookieSecure);
+                        setCookie(refname, JSON2.stringify(attributionCookie), configReferralCookieTimeout, configCookiePath, configCookieDomain);
                     }
                 }
                 // build out the rest of the request
@@ -1521,10 +1675,12 @@ var
                     '&_refts=' + referralTs +
                     '&_viewts=' + lastVisitTs +
                     (String(lastEcommerceOrderTs).length ? '&_ects=' + lastEcommerceOrderTs : '') +
-                    (String(referralUrl).length ? '&_ref=' + encodeWrapper(purify(referralUrl.slice(0, referralUrlMaxLength))) : '');
+                    (String(referralUrl).length ? '&_ref=' + encodeWrapper(purify(referralUrl.slice(0, referralUrlMaxLength))) : '') +
+                    (charSet ? '&cs=' + encodeWrapper(charSet) : '');
 
                 // Custom Variables, scope "page"
                 var customVariablesPageStringified = JSON2.stringify(customVariablesPage);
+
                 if (customVariablesPageStringified.length > 2) {
                     request += '&cvar=' + encodeWrapper(customVariablesPageStringified);
                 }
@@ -1546,6 +1702,7 @@ var
                 // Custom Variables, scope "visit"
                 if (customVariables) {
                     var customVariablesStringified = JSON2.stringify(customVariables);
+
                     // Don't sent empty custom variables {}
                     if (customVariablesStringified.length > 2) {
                         request += '&_cvar=' + encodeWrapper(customVariablesStringified);
@@ -1560,12 +1717,12 @@ var
                         }
                     }
 
-                    setCookie(cvarname, JSON2.stringify(customVariables), configSessionCookieTimeout, configCookiePath, configCookieDomain, cookieSecure);
+                    setCookie(cvarname, JSON2.stringify(customVariables), configSessionCookieTimeout, configCookiePath, configCookieDomain);
                 }
 
                 // update cookies
                 setVisitorIdCookie(uuid, createTs, visitCount, nowTs, lastVisitTs, isDefined(currentEcommerceOrderTs) && String(currentEcommerceOrderTs).length ? currentEcommerceOrderTs : lastEcommerceOrderTs);
-                setCookie(sesname, '*', configSessionCookieTimeout, configCookiePath, configCookieDomain, cookieSecure);
+                setCookie(sesname, '*', configSessionCookieTimeout, configCookiePath, configCookieDomain);
 
                 // tracker plugin hook
                 request += executePluginMethod(pluginMethod);
@@ -1705,6 +1862,17 @@ var
             }
 
             /*
+             * Log the site search request
+             */
+            function logSiteSearch(keyword, category, resultsCount, customData) {
+                var request = getRequest('search=' + encodeWrapper(keyword)
+                                + (category ? '&search_cat=' + encodeWrapper(category) : '')
+                                + (isDefined(resultsCount) ? '&search_count=' + resultsCount : ''), customData, 'sitesearch');
+
+                sendRequest(request, configTrackerPause);
+            }
+
+            /*
              * Log the goal with the server
              */
             function logGoal(idGoal, customRevenue, customData) {
@@ -1767,6 +1935,7 @@ var
                         documentAlias.removeEventListener(prefix + 'visibilitychange', ready, false);
                         callback();
                     });
+
                     return;
                 }
 
@@ -1851,6 +2020,7 @@ var
                     if (!scriptProtocol.test(sourceHref)) {
                         // track outlinks and all downloads
                         linkType = getLinkType(sourceElement.className, sourceHref, isSiteHostName(sourceHostName));
+
                         if (linkType) {
                             // urldecode %xx
                             sourceHref = urldecode(sourceHref);
@@ -1950,7 +2120,8 @@ var
                         java: 'application/x-java-vm',
                         gears: 'application/x-googlegears',
                         ag: 'application/x-silverlight'
-                    };
+                    },
+                    devicePixelRatio = (new RegExp('Mac OS X.*Safari/')).test(navigatorAlias.userAgent) ? windowAlias.devicePixelRatio || 1 : 1;
 
                 if (!((new RegExp('MSIE')).test(navigatorAlias.userAgent))) {
                     // general plugin detection
@@ -1981,7 +2152,9 @@ var
                 }
 
                 // screen resolution
-                browserFeatures.res = screenAlias.width + 'x' + screenAlias.height;
+                // - only Apple reports screen.* in device-independent-pixels (dips)
+                // - devicePixelRatio is always 2 on MacOSX+Retina regardless of resolution set in Display Preferences
+                browserFeatures.res = screenAlias.width * devicePixelRatio + 'x' + screenAlias.height * devicePixelRatio;
             }
 
 /*<DEBUG>*/
@@ -2003,6 +2176,7 @@ var
 
                     registeredHooks[hookName] = hookObj;
                 }
+
                 return hookObj;
             }
 /*</DEBUG>*/
@@ -2169,9 +2343,11 @@ var
                  */
                 setCustomVariable: function (index, name, value, scope) {
                     var toRecord;
+
                     if (!isDefined(scope)) {
                         scope = 'visit';
                     }
+
                     if (index > 0) {
                         name = isDefined(name) && !isString(name) ? String(name) : name;
                         value = isDefined(value) && !isString(value) ? String(value) : value;
@@ -2347,7 +2523,9 @@ var
 
                 /**
                  * Strip hash tag (or anchor) from URL
+                 * Note: this can be done in the Piwik>Settings>Websites on a per-website basis
                  *
+                 * @deprecated
                  * @param bool enableFilter
                  */
                 discardHashTag: function (enableFilter) {
@@ -2562,8 +2740,26 @@ var
                  * @param mixed customData
                  */
                 trackPageView: function (customTitle, customData) {
+                    if (isOverlaySession(configTrackerUrl, configTrackerSiteId)) {
+                        trackCallback(function () {
+                            injectOverlayScripts(configTrackerUrl, configTrackerSiteId);
+                        });
+                    } else {
+                        trackCallback(function () {
+                            logPageView(customTitle, customData);
+                        });
+                    }
+                },
+
+                /**
+                 * Log special pageview: Internal search
+                 *
+                 * @param string customTitle
+                 * @param mixed customData
+                 */
+                trackSiteSearch: function (keyword, category, resultsCount) {
                     trackCallback(function () {
-                        logPageView(customTitle, customData);
+                        logSiteSearch(keyword, category, resultsCount);
                     });
                 },
 
@@ -2688,8 +2884,20 @@ var
 
         asyncTracker = new Tracker();
 
+        // find the call to setTrackerUrl or setSiteid (if any) and call them first
         for (i = 0; i < _paq.length; i++) {
-            apply(_paq[i]);
+            if (_paq[i][0] === 'setTrackerUrl'
+                    || _paq[i][0] === 'setSiteId') {
+                apply(_paq[i]);
+                delete _paq[i];
+            }
+        }
+
+        // apply the queue of actions
+        for (i = 0; i < _paq.length; i++) {
+            if (_paq[i]) {
+                apply(_paq[i]);
+            }
         }
 
         // replace initialization array with proxy object
@@ -2774,21 +2982,25 @@ var
 
         // handle Piwik globals
         option = getOption('tracker_pause');
+
         if (option) {
             piwikTracker.setLinkTrackingTimer(option);
         }
 
         option = getOption('download_extensions');
+
         if (option) {
             piwikTracker.setDownloadExtensions(option);
         }
 
         option = getOption('hosts_alias');
+
         if (option) {
             piwikTracker.setDomains(option);
         }
 
         option = getOption('ignore_classes');
+
         if (option) {
             piwikTracker.setIgnoreClasses(option);
         }

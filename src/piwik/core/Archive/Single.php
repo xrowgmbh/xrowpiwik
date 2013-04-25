@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Single.php 6604 2012-07-31 06:14:12Z matt $
  * 
  * 
  * @category Piwik
@@ -98,6 +97,16 @@ class Piwik_Archive_Single extends Piwik_Archive
 	}
 	
 	/**
+	 * Returns the blob cache. For testing.
+	 * 
+	 * @return array
+	 */
+	public function getBlobCache()
+	{
+		return $this->blobCached;
+	}
+	
+	/**
 	 * Returns the pretty date of this Archive, eg. 'Thursday 20th March 2008'
 	 *
 	 * @return string
@@ -180,20 +189,20 @@ class Piwik_Archive_Single extends Piwik_Archive
 			$this->isThereSomeVisits = false;
 			$this->alreadyChecked[$cacheKey] = true;
 			$dayString = $this->period->getPrettyString();
-			$logMessage = "Preparing archive: " . $periodString . "(" . $dayString . "), plugin $plugin ";
+			$logMessage = sprintf("%s (%s), plugin %s", $periodString, $dayString, $plugin);
 			// if the END of the period is BEFORE the website creation date
 			// we already know there are no stats for this period
 			// we add one day to make sure we don't miss the day of the website creation
 			if( $this->period->getDateEnd()->addDay(2)->isEarlier( $this->site->getCreationDate() ) )
 			{
-				Piwik::log("$logMessage skipped, archive is before the website was created.");
+				Piwik::log(sprintf("Archive %s skipped, archive is before the website was created.", $logMessage));
 				return;
 			}
 			
 			// if the starting date is in the future we know there is no visit
 			if( $this->period->getDateStart()->subDay(2)->isLater( Piwik_Date::today() ) )
 			{
-				Piwik::log("$logMessage skipped, archive is after today.");
+				Piwik::log(sprintf("Archive %s skipped, archive is after today.", $logMessage));
 				return;
 			}
 			
@@ -215,25 +224,25 @@ class Piwik_Archive_Single extends Piwik_Archive
 				if($this->archiveProcessing->isArchivingDisabled())
 				{
 					$archivingDisabledArchiveNotProcessed = true;
-					$logMessage = "* ARCHIVING DISABLED, for $logMessage";
+					$logMessage = sprintf("Archiving disabled, for %s", $logMessage);
 				}
 				else
 				{
-					Piwik::log("* PROCESSING $logMessage, not archived yet...");
+					Piwik::log(sprintf("Processing %s, not archived yet...", $logMessage));
 					$archiveJustProcessed = true;
 
 					// Process the reports
 					$this->archiveProcessing->launchArchiving();
 
 					$idArchive = $this->archiveProcessing->getIdArchive();
-					$logMessage = "PROCESSED: idArchive = ".$idArchive.", for $logMessage";
+					$logMessage = sprintf("Processed %d, for %s", $idArchive, $logMessage);
 				}
 			}
 			else
 			{
-				$logMessage = "* ALREADY PROCESSED, Fetching idArchive = $idArchive (idSite=".$this->site->getId()."), for $logMessage";
+				$logMessage = sprintf("Already processed, fetching idArchive = %d (idSite=%d), for %s", $idArchive, $this->site->getId(), $logMessage);
 			}
-			Piwik::log("$logMessage, Visits = ". $this->archiveProcessing->getNumberOfVisits());
+			Piwik::log(sprintf("%s, Visits = %d", $logMessage, $this->archiveProcessing->getNumberOfVisits()));
 			$this->isThereSomeVisits = !$archivingDisabledArchiveNotProcessed
 										&& $this->archiveProcessing->isThereSomeVisits();
 			$this->idArchive = $idArchive;
@@ -409,11 +418,16 @@ class Piwik_Archive_Single extends Piwik_Archive
 
 		$db = Zend_Registry::get('db');
 		$hasBlobs = $db->hasBlobDataType();
+		
+		// select blobs w/ name like "$name_[0-9]+" w/o using RLIKE
+		$nameEnd = strlen($name) + 2;
 		$query = $db->query("SELECT value, name
 								FROM $tableBlob
 								WHERE idarchive = ?
-									AND name LIKE '$name%'",	
-								array( $this->idArchive ) 
+									AND (name = ? OR
+											(name LIKE ? AND SUBSTRING(name, $nameEnd, 1) >= '0'
+														 AND SUBSTRING(name, $nameEnd, 1) <= '9') )",
+								array( $this->idArchive, $name, $name.'%' ) 
 							);
 
 		while($row = $query->fetch())
@@ -507,7 +521,7 @@ class Piwik_Archive_Single extends Piwik_Archive
 	{
 		if(!is_null($idSubTable))
 		{
-			$name .= "_$idSubTable";
+			$name .= sprintf("_%s", $idSubTable);
 		}
 		
 		$this->setRequestedReport($name);
@@ -578,7 +592,13 @@ class Piwik_Archive_Single extends Piwik_Archive
 		{
 			return 'Goals_Metrics';
 		}
-   		return $metric;
+		// Actions metrics are processed by the Actions plugin (HACK) (3RD HACK IN FACT) (YES, THIS IS TOO MUCH HACKING)
+		// (FIXME PLEASE).
+		if (in_array($metric, Piwik_Archive::$actionsMetrics))
+		{
+			return 'Actions_Metrics';
+		}
+		return $metric;
 	}
 	
 	/**

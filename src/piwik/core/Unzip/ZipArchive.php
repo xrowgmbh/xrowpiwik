@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ZipArchive.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik

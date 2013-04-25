@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GenerateGraphData.php 6596 2012-07-30 20:01:36Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -12,7 +11,7 @@
 
 /**
  * Reads data from the API and prepares data to give to the renderer Piwik_Visualization_Chart.
- * This class is used to generate the data for the FLASH charts. It is given as a parameter of the SWF file.
+ * This class is used to generate the data for the graphs.
  * You can set the number of elements to appear in the graph using: setGraphLimit();
  * Example:
  * <pre>
@@ -116,7 +115,8 @@ abstract class Piwik_ViewDataTable_GenerateGraphData extends Piwik_ViewDataTable
 	 */
 	protected function addSeriesPickerToView($multiSelect=true)
 	{
-		if (count($this->selectableColumns))
+		if (count($this->selectableColumns)
+			&& Piwik_Common::getRequestVar('showSeriesPicker', 1) == 1)
 		{
 			// build the final configuration for the series picker
 			$columnsToDisplay = $this->getColumnsToDisplay();
@@ -198,6 +198,13 @@ abstract class Piwik_ViewDataTable_GenerateGraphData extends Piwik_ViewDataTable
 									);
 		}
 		$this->isDataAvailable = $this->dataTable->getRowsCount() != 0;
+		
+		// if addTotalRow was called in GenerateGraphHTML, add a row containing totals of
+		// different metrics
+		if (Piwik_Common::getRequestVar('add_total_row', 0) == 1)
+		{
+			$this->dataTable->queueFilter('AddSummaryRow', array(0, Piwik_Translate('General_Total'), null, false));
+		}
 
 		if($this->isDataAvailable)
 		{

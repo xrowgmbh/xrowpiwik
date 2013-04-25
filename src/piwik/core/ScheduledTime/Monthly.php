@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Monthly.php 6510 2012-07-13 20:05:39Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -19,6 +18,20 @@
  */
 class Piwik_ScheduledTime_Monthly extends Piwik_ScheduledTime
 {
+	/**
+	 * Day of the week for scheduled time.
+	 * 
+	 * @var int
+	 */
+	private $dayOfWeek = null;
+	
+	/**
+	 * Week number for scheduled time.
+	 * 
+	 * @var int
+	 */
+	private $week = null;
+	
     /**
      * @return int
      */
@@ -43,6 +56,17 @@ class Piwik_ScheduledTime_Monthly extends Piwik_ScheduledTime
 		if ( $this->day !== null )
 		{
 			$scheduledDay = $this->day;
+		}
+		
+		if ($this->dayOfWeek !== null
+			&& $this->week !== null)
+		{
+			$newTime = $rescheduledTime + $this->week * 7 * 86400;
+			while (date("w", $newTime) != $this->dayOfWeek % 7) // modulus for sanity check
+			{
+				$newTime += 86400;
+			}
+			$scheduledDay = ($newTime - $rescheduledTime) / 86400 + 1;
 		}
 
 		// Caps scheduled day
@@ -72,5 +96,28 @@ class Piwik_ScheduledTime_Monthly extends Piwik_ScheduledTime
 		}
 
 		$this->day = $_day;
+	}
+	
+	/**
+	 * Makes this scheduled time execute on a particular day of the week on each month.
+	 * 
+	 * @param int $_day the day of the week to use, between 0-6 (inclusive). 0 -> Sunday
+	 * @param int $_week the week to use, between 0-3 (inclusive)
+	 * @throws Exception if either parameter is invalid
+	 */
+	public function setDayOfWeek($_day, $_week)
+	{
+		if (!($_day >= 0 && $_day < 7))
+		{
+			throw new Exception("Invalid day of week parameter, must be >= 0 & < 7");
+		}
+		
+		if (!($_week >= 0 && $_week < 4))
+		{
+			throw new Exception("Invalid week number, must be >= 1 & < 4");
+		}
+		
+		$this->dayOfWeek = $_day;
+		$this->week = $_week;
 	}
 }

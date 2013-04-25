@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: 0.2.27.php 4771 2011-05-22 21:49:27Z vipsoft $
  *
  * @category Piwik
  * @package Updates

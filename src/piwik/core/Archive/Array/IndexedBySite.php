@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: IndexedBySite.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -216,7 +215,7 @@ class Piwik_Archive_Array_IndexedBySite extends Piwik_Archive_Array
 	 * Gets the archive id of every Single archive this archive holds. This method
 	 * will not launch the archiving process.
 	 * 
-	 * @param string  $metrics  The requested archive metrics.
+	 * @param array  $metrics  The requested archive metrics.
 	 * @return array
 	 */
 	private function getArchiveIdsWithoutLaunching( $metrics )

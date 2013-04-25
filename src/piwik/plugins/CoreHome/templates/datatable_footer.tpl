@@ -36,7 +36,7 @@
                     <a class="tableIcon" format="tableAllColumns" var="tableAllColumns"><img title="{'General_DisplayTableWithMoreMetrics'|translate}" src="themes/default/images/table_more.png" /></a>
                     {/if}
                     {if $properties.show_goals}
-					<a class="tableIcon" format="tableGoals" var="tableGoals"><img title="{'General_DisplayTableWithGoalMetrics'|translate}" src="themes/default/images/{if $javascriptVariablesToSet.idGoal=='ecommerceOrder'}ecommerceOrder.gif{else}goal.png{/if}" /></a>
+					<a class="tableIcon" format="tableGoals" var="tableGoals"><img title="{'General_DisplayTableWithGoalMetrics'|translate}" src="themes/default/images/{if isset($javascriptVariablesToSet.idGoal) && $javascriptVariablesToSet.idGoal=='ecommerceOrder'}ecommerceOrder.gif{else}goal.png{/if}" /></a>
                     {/if}
                     {if $properties.show_ecommerce}
                     <a class="tableIcon" format="ecommerceOrder" var="ecommerceOrder"><img title="{'General_EcommerceOrders'|translate}" src="themes/default/images/ecommerceOrder.gif" /> <span>{'General_EcommerceOrders'|translate}</span></a>
@@ -59,8 +59,7 @@
 				</span>
            </div>
            
-           {/if}			
-           
+           {/if}
 			<div class="tableIconsGroup">
 				<span class="exportToFormatIcons"><a class="tableIcon" var="export"><img width="16" height="16" src="themes/default/images/export.png" title="{'General_ExportThisReport'|translate}" /></a></span>
 				<span class="exportToFormatItems" style="display:none"> 
@@ -82,7 +81,7 @@
 			</div>
 			
 		</div>
-        <div class="limitSelection {if !$properties.show_pagination_control} hidden{/if}" title="{'General_RowsToDisplay'|translate:escape:'html'}"></div>
+		<div class="limitSelection {if !$properties.show_pagination_control && !$properties.show_limit_control} hidden{/if}" title="{'General_RowsToDisplay'|translate:escape:'html'}"></div>
 		<div class="tableConfiguration">
 			<a class="tableConfigurationIcon" href="#"></a>
 			<ul>
@@ -95,6 +94,12 @@
 				{/if}
 			</ul>
 		</div>
+		{if !$properties.hide_annotations_view}
+		<div class="annotationView" title="{'Annotations_IconDesc_js'|translate}">
+			<a class="tableIcon"><img width="16" height="16" src="themes/default/images/grey_marker.png"/></a>
+			<span>{'Annotations_Annotations'|translate}</span>
+		</div>
+		{/if}
 	</div>
 {/if}
 
@@ -115,5 +120,7 @@
 {/if}
 
 </div>
+
+<span class="loadingPiwikBelow" style='display:none'><img src="themes/default/images/loading-blue.gif" /> {'General_LoadingData'|translate}</span>
 
 <div class="dataTableSpacer"></div>

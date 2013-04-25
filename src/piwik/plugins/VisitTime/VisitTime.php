@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitTime.php 6679 2012-08-05 22:13:23Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitTime
@@ -192,7 +191,6 @@ class Piwik_VisitTime extends Piwik_Plugin
 		
 		if($query === false) return;
 		
-		$goalByServerTime = array();
 		while($row = $query->fetch())
 		{
 			if(!isset($this->interestByServerTime[$row['label']][Piwik_Archive::INDEX_GOALS][$row['idgoal']])) $this->interestByServerTime[$row['label']][Piwik_Archive::INDEX_GOALS][$row['idgoal']] = $archiveProcessing->getNewGoalRow($row['idgoal']);

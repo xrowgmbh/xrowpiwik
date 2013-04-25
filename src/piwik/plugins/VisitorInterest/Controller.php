@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5411 2011-11-05 02:02:15Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_VisitorInterest
@@ -33,6 +32,7 @@ class Piwik_VisitorInterest_Controller extends Piwik_Controller
 		$view->setColumnsToDisplay( array('label','nb_visits') );
 		$view->setSortedColumn( 'label', 'asc' );
 		$view->setColumnTranslation('label', Piwik_Translate('VisitorInterest_ColumnVisitDuration'));
+		$view->setGraphLimit(10);
 		$view->disableSort();
 		$view->disableExcludeLowPopulation();
 		$view->disableOffsetInformationAndPaginationControls();
@@ -49,6 +49,7 @@ class Piwik_VisitorInterest_Controller extends Piwik_Controller
 		$view->setColumnsToDisplay( array('label','nb_visits') );
 		$view->setSortedColumn( 'label', 'asc' );
 		$view->setColumnTranslation('label', Piwik_Translate('VisitorInterest_ColumnPagesPerVisit'));
+		$view->setGraphLimit(10);
 		$view->disableExcludeLowPopulation();
 		$view->disableOffsetInformationAndPaginationControls();
 		$view->disableSearchBox();

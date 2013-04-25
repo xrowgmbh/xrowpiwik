@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: AddSummaryRow.php 6439 2012-06-01 14:12:57Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -77,12 +76,12 @@ class Piwik_DataTable_Filter_AddSummaryRow extends Piwik_DataTable_Filter
 				//FIXME: I'm not sure why it could return false, but it was reported in: http://forum.piwik.org/read.php?2,89324,page=1#msg-89442
 				if($summaryRow)
 				{
-					$newRow->sumRow($summaryRow);
+					$newRow->sumRow($summaryRow, $enableCopyMetadata = false);
 				}
 			}
 			else
 			{
-				$newRow->sumRow($rows[$i]);
+				$newRow->sumRow($rows[$i], $enableCopyMetadata = false);
 			}
 		}
 		

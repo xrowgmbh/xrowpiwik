@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Site.php 6959 2012-09-10 07:37:01Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -184,6 +183,26 @@ class Piwik_Site
 		return $this->get('ecommerce') == 1;
 	}
 
+	function getSearchKeywordParameters()
+	{
+		return $this->get('sitesearch_keyword_parameters');
+	}
+
+	function getSearchCategoryParameters()
+	{
+		return $this->get('sitesearch_category_parameters');
+	}
+
+	/**
+	 * Returns whether Site Search Tracking is enabled for the site
+	 *
+	 * @return bool
+	 */
+	function isSiteSearchEnabled()
+	{
+		return $this->get('sitesearch') == 1;
+	}
+
 	/**
 	 * Checks the given string for valid site ids and returns them as an array
 	 *
@@ -192,6 +211,11 @@ class Piwik_Site
 	 */
 	static public function getIdSitesFromIdSitesString( $ids )
 	{
+		if ($ids === 'all')
+		{
+			return Piwik_SitesManager_API::getInstance()->getSitesIdWithAtLeastViewAccess();
+		}
+		
 		if(!is_array($ids))
 		{
 			$ids = explode(',', $ids);
@@ -283,16 +307,27 @@ class Piwik_Site
 	{
 		return self::getFor($idsite, 'main_url');
 	}
-	
+
 	/**
 	 * Returns whether the site with the specified ID is ecommerce enabled
-	 * 
+	 *
 	 * @param int  $idsite  The site ID.
 	 * @return string
 	 */
 	static public function isEcommerceEnabledFor($idsite)
 	{
 		return self::getFor($idsite, 'ecommerce') == 1;
+	}
+
+	/**
+	 * Returns whether the site with the specified ID is Site Search enabled
+	 *
+	 * @param int  $idsite  The site ID.
+	 * @return string
+	 */
+	static public function isSiteSearchEnabledFor($idsite)
+	{
+		return self::getFor($idsite, 'sitesearch') == 1;
 	}
 
 	/**

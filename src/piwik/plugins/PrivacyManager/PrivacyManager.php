@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PrivacyManager.php 6484 2012-06-19 23:24:27Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_PrivacyManager
@@ -78,11 +77,13 @@ class Piwik_PrivacyManager extends Piwik_Plugin
 		// they will execute before the optimize tables task
 		
 		$purgeReportDataTask = new Piwik_ScheduledTask(
-			$this, 'deleteReportData', new Piwik_ScheduledTime_Daily(), Piwik_ScheduledTask::LOW_PRIORITY);
+			$this, 'deleteReportData', null, new Piwik_ScheduledTime_Daily(), Piwik_ScheduledTask::LOW_PRIORITY
+		);
 		$tasks[] = $purgeReportDataTask;
 		
 		$purgeLogDataTask = new Piwik_ScheduledTask(
-			$this, 'deleteLogData', new Piwik_ScheduledTime_Daily(), Piwik_ScheduledTask::LOW_PRIORITY);
+			$this, 'deleteLogData', null, new Piwik_ScheduledTime_Daily(), Piwik_ScheduledTask::LOW_PRIORITY
+		);
 		$tasks[] = $purgeLogDataTask;
 	}
 
@@ -101,7 +102,7 @@ class Piwik_PrivacyManager extends Piwik_Plugin
         Piwik_AddAdminMenu('PrivacyManager_MenuPrivacySettings',
                            array('module' => 'PrivacyManager', 'action' => 'privacySettings'),
                            Piwik::isUserHasSomeAdminAccess(),
-                           $order = 8);
+                           $order = 7);
     }
 	
 	/**

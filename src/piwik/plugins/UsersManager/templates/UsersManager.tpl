@@ -1,5 +1,3 @@
-{assign var=showSitesSelection value=false}
-{assign var=showPeriodSelection value=false}
 {include file="CoreAdminHome/templates/header.tpl"}
 {loadJavascriptTranslations plugins='UsersManager'}
 
@@ -41,20 +39,20 @@
 		{/capture}
 		{include file="CoreHome/templates/sites_selection.tpl"
 			siteName=$defaultReportSiteName idSite=$idSiteSelected allSitesItemText=$applyAllSitesText
-			allWebsitesLinkLocation=top}
+			allWebsitesLinkLocation=top siteSelectorId="usersManagerSiteSelect" switchSiteOnSelect=false}
 	</section>
-	{literal}<script type="text/javascript">
-		window.autocompleteOnNewSiteSelect = function(siteId, siteName)
-		{
-			switchSite(siteId, siteName, false /* do not show main ajax loading animation */);
-		};
-	</script>{/literal}
 </div>
 
 {ajaxErrorDiv}
 {ajaxLoadingDiv}
 
 <div class="entityContainer" style='width:600px'>
+	{if $anonymousHasViewAccess}
+		<div class="ajaxSuccess" style="display:inline-block">
+			{'UsersManager_AnonymousUserHasViewAccess'|translate:"'anonymous'":"'view'"}<br/>
+			{'UsersManager_AnonymousUserHasViewAccess2'|translate}
+		</div>
+	{/if}
 	<table class="entityTable dataTable" id="access" style="display:inline-table;width:500px;">
 		<thead>
 		<tr>

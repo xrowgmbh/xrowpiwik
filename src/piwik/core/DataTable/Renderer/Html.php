@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Html.php 6410 2012-05-31 00:16:14Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -65,7 +64,7 @@ class Piwik_DataTable_Renderer_Html extends Piwik_DataTable_Renderer
 	function renderException()
 	{
 		$this->renderHeader();
-		$exceptionMessage = self::renderHtmlEntities($this->exception->getMessage());
+		$exceptionMessage = $this->getExceptionMessage();
 		return nl2br($exceptionMessage);
 	}
 
@@ -77,6 +76,11 @@ class Piwik_DataTable_Renderer_Html extends Piwik_DataTable_Renderer
 	 */
 	protected function renderTable($table)
 	{
+		if (is_array($table)) // convert array to DataTable
+		{
+			$table = Piwik_DataTable::makeFromSimpleArray($table);
+		}
+		
 		if($table instanceof Piwik_DataTable_Array)
 		{
 			foreach($table->getArray() as $date => $subtable )

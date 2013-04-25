@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Csv.php 6412 2012-05-31 03:24:39Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -90,7 +89,7 @@ class Piwik_DataTable_Renderer_Csv extends Piwik_DataTable_Renderer
 	function renderException()
 	{
 		@header('Content-Type: text/html; charset=utf-8');
-		$exceptionMessage = self::renderHtmlEntities($this->exception->getMessage());
+		$exceptionMessage = $this->getExceptionMessage();
 		return 'Error: '.$exceptionMessage;
 	}
 
@@ -117,12 +116,17 @@ class Piwik_DataTable_Renderer_Csv extends Piwik_DataTable_Renderer
 	/**
 	 * Computes the output of the given data table
 	 *
-	 * @param Piwik_DataTable  $table
-	 * @param array            $allColumns
+	 * @param Piwik_DataTable|array  $table
+	 * @param array            		 $allColumns
 	 * @return string
 	 */
 	protected function renderTable($table, &$allColumns = array() )
 	{
+		if (is_array($table)) // convert array to DataTable
+		{
+			$table = Piwik_DataTable::makeFromSimpleArray($table);
+		}
+		
 		if($table instanceof Piwik_DataTable_Array)
 		{
 			$str = $this->renderDataTableArray($table, $allColumns);

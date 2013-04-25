@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6362 2012-05-29 05:17:56Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UserSettings
@@ -39,7 +38,8 @@ class Piwik_UserSettings_Controller extends Piwik_Controller
 		$view->dataTableBrowser = $this->getBrowser( true );
 		$view->dataTableBrowserType = $this->getBrowserType ( true );
 		$view->dataTableMobileVsDesktop = $this->getMobileVsDesktop( true );
-		
+		$view->dataTableBrowserLanguage = $this->getLanguage( true );
+
 		echo $view->render();
 	}
 
@@ -188,4 +188,26 @@ class Piwik_UserSettings_Controller extends Piwik_Controller
 		
 		return $view;
 	}
+
+    /**
+     * Renders datatable for browser language
+     *
+     * @param bool $fetch
+     *
+     * @return string|void
+     */
+    public function getLanguage( $fetch = false)
+    {
+        $view = Piwik_ViewDataTable::factory();
+        $view->init( $this->pluginName, __FUNCTION__, "UserSettings.getLanguage" );
+        $view->disableExcludeLowPopulation();
+
+        $view->setColumnsToDisplay( array('label','nb_visits') );
+        $view->setColumnTranslation('label', Piwik_Translate('General_Language'));
+        $view->setSortedColumn('nb_visits');
+        $view->disableSearchBox();
+        $view->setLimit( 5 );
+
+        return $this->renderView($view, $fetch);
+    }
 }

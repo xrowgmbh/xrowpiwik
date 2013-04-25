@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleAPI.php 3292 2010-11-05 20:14:07Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleAPI

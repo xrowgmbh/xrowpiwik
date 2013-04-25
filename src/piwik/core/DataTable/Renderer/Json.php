@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Json.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -39,7 +38,7 @@ class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 	{
 		$this->renderHeader();
 		
-		$exceptionMessage = self::renderHtmlEntities($this->exception->getMessage());
+		$exceptionMessage = $this->getExceptionMessage();
 		$exceptionMessage = str_replace(array("\r\n","\n"), "", $exceptionMessage);
 		$exceptionMessage = '{"result":"error", "message":"'.$exceptionMessage.'"}';
 		
@@ -54,12 +53,23 @@ class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 	 */
 	protected function renderTable($table)
 	{
-		$renderer = new Piwik_DataTable_Renderer_Php();
-		$renderer->setTable($table);
-		$renderer->setRenderSubTables($this->isRenderSubtables());
-		$renderer->setSerialize(false);
-		$renderer->setHideIdSubDatableFromResponse($this->hideIdSubDatatable);
-		$array = $renderer->flatRender();
+		if (is_array($table))
+		{
+			$array = $table;
+			if (self::shouldWrapArrayBeforeRendering($array, $wrapSingleValues = true))
+			{
+				$array = array($array);
+			}
+		}
+		else
+		{
+			$renderer = new Piwik_DataTable_Renderer_Php();
+			$renderer->setTable($table);
+			$renderer->setRenderSubTables($this->isRenderSubtables());
+			$renderer->setSerialize(false);
+			$renderer->setHideIdSubDatableFromResponse($this->hideIdSubDatatable);
+			$array = $renderer->flatRender();
+		}
 		
 		if(!is_array($array))
 		{
@@ -99,7 +109,12 @@ class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 	 */
 	protected function renderHeader()
 	{
-		@header('Content-Type: application/json; charset=utf-8');
+		self::sendHeaderJSON();
 		Piwik::overrideCacheControlHeaders();
+	}
+
+	public static function sendHeaderJSON()
+	{
+		@header('Content-Type: application/json; charset=utf-8');
 	}
 }

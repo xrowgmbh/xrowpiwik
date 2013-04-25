@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ViewDataTable.php 6873 2012-08-25 10:02:08Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -15,6 +14,12 @@
  * The main() method will create an object implementing Piwik_View_Interface
  * You can customize the dataTable using the disable* methods.
  *
+ * You can also customize the dataTable rendering using row metadata:
+ * - 'html_label_prefix': If this metadata is present on a row, it's contents will be prepended
+ *                        the label in the HTML output.
+ * - 'html_label_suffix': If this metadata is present on a row, it's contents will be appended
+ *                        after the label in the HTML output.
+ * 
  * Example:
  * In the Controller of the plugin VisitorInterest
  * <pre>
@@ -292,6 +297,7 @@ abstract class Piwik_ViewDataTable
 		$this->viewProperties['show_table_all_columns'] = Piwik_Common::getRequestVar('show_table_all_columns', true);
 		$this->viewProperties['show_all_views_icons'] = Piwik_Common::getRequestVar('show_all_views_icons', true);
 		$this->viewProperties['hide_all_views_icons'] = Piwik_Common::getRequestVar('hide_all_views_icons', false);
+		$this->viewProperties['hide_annotations_view'] = Piwik_Common::getRequestVar('hide_annotations_view', true);
 		$this->viewProperties['show_bar_chart'] = Piwik_Common::getRequestVar('show_barchart', true);
 		$this->viewProperties['show_pie_chart'] = Piwik_Common::getRequestVar('show_piechart', true);
 		$this->viewProperties['show_tag_cloud'] = Piwik_Common::getRequestVar('show_tag_cloud', true);
@@ -300,6 +306,7 @@ abstract class Piwik_ViewDataTable
 		$this->viewProperties['show_exclude_low_population'] = Piwik_Common::getRequestVar('show_exclude_low_population', true);
 		$this->viewProperties['show_offset_information'] = Piwik_Common::getRequestVar('show_offset_information', true);
 		$this->viewProperties['show_pagination_control'] = Piwik_Common::getRequestVar('show_pagination_control', true);
+		$this->viewProperties['show_limit_control'] = false;
 		$this->viewProperties['show_footer'] = Piwik_Common::getRequestVar('show_footer', true);
 		$this->viewProperties['show_footer_icons'] = ($this->idSubtable == false);
 		$this->viewProperties['show_related_reports'] = Piwik_Common::getRequestVar('show_related_reports', true);
@@ -433,10 +440,7 @@ abstract class Piwik_ViewDataTable
 	 */
 	protected function checkStandardDataTable()
 	{
-		if(!($this->dataTable instanceof Piwik_DataTable))
-		{
-			throw new Exception("Unexpected data type to render.");
-		}
+		Piwik::checkObjectTypeIs($this->dataTable, array('Piwik_DataTable'));
 	}
 	
 	/**
@@ -870,6 +874,14 @@ abstract class Piwik_ViewDataTable
 	}
 	
 	/**
+	 * Ensures the limit dropdown will always be shown, even if pagination is disabled.
+	 */
+	public function alwaysShowLimitDropdown()
+	{
+		$this->viewProperties['show_limit_control'] = true;
+	}
+	
+	/**
 	 * The "X-Y of Z" won't be displayed under this table
 	 */
 	public function disableOffsetInformation()
@@ -950,6 +962,20 @@ abstract class Piwik_ViewDataTable
 	{
 		$this->viewProperties['show_all_views_icons'] = false;
 		$this->viewProperties['hide_all_views_icons'] = true;
+	}
+	
+	/**
+	 * Whether or not to show the annotations view. This method has no effect if
+	 * the Annotations plugin is not loaded.
+	 */
+	public function showAnnotationsView()
+	{
+		if (!Piwik_PluginsManager::getInstance()->isPluginLoaded('Annotations'))
+		{
+			return;
+		}
+		
+		$this->viewProperties['hide_annotations_view'] = false;
 	}
 	
 	/**
@@ -1228,7 +1254,7 @@ abstract class Piwik_ViewDataTable
 				$columnsNames = array($columnsNames);
 			}
 		}
-		$this->columnsToDisplay = $columnsNames;
+		$this->columnsToDisplay = array_filter($columnsNames);
 	}
 
 	/**

@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FormLogin.php 2968 2010-08-20 15:26:33Z vipsoft $
  *
  * @category Piwik_Plugins
  * @package Piwik_Login
@@ -16,7 +15,7 @@
  */
 class Piwik_Login_FormLogin extends Piwik_QuickForm2
 {
-	function __construct( $id = 'loginform', $method = 'post', $attributes = null, $trackSubmit = false)
+	function __construct( $id = 'login_form', $method = 'post', $attributes = null, $trackSubmit = false)
 	{
 		parent::__construct($id,  $method, $attributes, $trackSubmit);
 	}

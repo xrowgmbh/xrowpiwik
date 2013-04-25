@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: AssetManager.php 5951 2012-03-04 22:04:41Z vipsoft $
  *
  * @category Piwik
  * @package Piwik
@@ -127,23 +126,30 @@ class Piwik_AssetManager
 		$mergedContent = cssmin::minify($mergedContent);
 		$mergedContent = str_replace("\n", "\r\n", $mergedContent);
 
-		// Remove the previous file
-		self::removeMergedAsset(self::MERGED_CSS_FILE);
+        Piwik_PostEvent('AssetManager.filterMergedCss', $mergedContent);
 
-		// Tries to open the new file
-		$newFilePath = self::getAbsoluteMergedFileLocation(self::MERGED_CSS_FILE);
-		$newFile = @fopen($newFilePath, "w");
+        self::writeAssetToFile($mergedContent, self::MERGED_CSS_FILE);
+    }
 
-		if (!$newFile) {
-			throw new Exception ("The file : " . $newFile . " can not be opened in write mode.");
-		}
+    private static function writeAssetToFile($mergedContent, $name)
+    {
+        // Remove the previous file
+        self::removeMergedAsset($name);
 
-		// Write the content in the new file
-		fwrite($newFile, $mergedContent);
-		fclose($newFile);
-	}
+        // Tries to open the new file
+        $newFilePath = self::getAbsoluteMergedFileLocation($name);
+        $newFile = @fopen($newFilePath, "w");
 
-	/**
+        if (!$newFile) {
+            throw new Exception ("The file : " . $newFile . " can not be opened in write mode.");
+        }
+
+        // Write the content in the new file
+        fwrite($newFile, $mergedContent);
+        fclose($newFile);
+    }
+
+    /**
 	 * Returns individual CSS file inclusion directive(s) using the markup <link>
 	 *
 	 * @return string
@@ -236,20 +242,9 @@ class Piwik_AssetManager
 		}
 		$mergedContent = str_replace("\n", "\r\n", $mergedContent);
 
-		// Remove the previous file
-		self::removeMergedAsset(self::MERGED_JS_FILE);
+        Piwik_PostEvent('AssetManager.filterMergedJs', $mergedContent);
 
-		// Tries to open the new file
-		$newFilePath = self::getAbsoluteMergedFileLocation(self::MERGED_JS_FILE);
-		$newFile = @fopen($newFilePath, "w");
-
-		if (!$newFile) {
-			throw new Exception ("The file : " . $newFile . " can not be opened in write mode.");
-		}
-
-		// Write the content in the new file
-		fwrite($newFile, $mergedContent);
-		fclose($newFile);
+        self::writeAssetToFile($mergedContent, self::MERGED_JS_FILE);
 	}
 
 	/**
@@ -296,6 +291,7 @@ class Piwik_AssetManager
 			'libs/',
 			'themes/default/common.js',
 			'themes/default/',
+			'plugins/CoreHome/templates/broadcast.js',
 			'plugins/',
 		);
 

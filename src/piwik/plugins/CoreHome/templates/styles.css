@@ -151,3 +151,86 @@ div.pk-emptyGraph {
     text-align: center;
     font-style: italic;
 }
+
+
+/**
+ * Popover
+ * @see popover.js
+ */
+
+#Piwik_Popover {
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+.Piwik_Popover_Loading_Name {
+	padding: 50px 0 65px 0;
+	font-size: 16px;
+	line-height: 20px;
+	font-weight: normal;
+	text-align: center;
+	background: url(../../../themes/default/images/loading-blue.gif) no-repeat center 20px;
+}
+
+.Piwik_Popover_Loading_NameWithSubject {
+	padding-bottom: 30px;
+}
+
+.Piwik_Popover_Loading_Subject {
+	padding: 0 70px 55px 70px;
+	color: #7e7363;
+	text-align: center;
+	font-size: 14px;
+}
+
+.Piwik_Popover_Error {
+	padding: 50px 20px 65px 20px;
+	text-align: center;
+}
+
+.Piwik_Popover_Error_Title {
+	color: #E87500;
+	font-weight: bold;
+	font-size: 16px;
+}
+
+.Piwik_Popover_Error_Title span {
+	color: #222;
+	font-weight: normal;
+	font-size: 16px;
+}
+
+.Piwik_Popover_Error_Message {
+	color: #7e7363;
+	padding: 20px 0 0 0;
+	font-size: 14px;
+}
+
+a.Piwik_Popover_Error_Back {
+	display: block;
+	margin: 20px 0 0 0;
+	color: #1D3256;
+	font-size: 14px;
+}
+
+#alert.ui-confirm input {
+    display: block;
+    margin: 10px auto 5px!important;
+}
+
+#updateCheckLinkContainer {
+	float:right;
+	cursor:pointer;
+}
+
+#updateCheckLinkContainer>* {
+	vertical-align:bottom;
+}
+
+#header_message #checkForUpdates {
+	font-size:.8em;
+	line-height:16px;
+	display:inline-block;
+}
+#header_message #checkForUpdates:hover {
+	text-decoration:none;
+}

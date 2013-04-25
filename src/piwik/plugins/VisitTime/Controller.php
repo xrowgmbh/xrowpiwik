@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6681 2012-08-05 23:29:32Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_VisitTime

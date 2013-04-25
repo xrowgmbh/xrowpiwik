@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6950 2012-09-08 22:05:28Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_MultiSites
@@ -33,38 +32,37 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 
 	function index()
 	{
-		$view = new Piwik_View("MultiSites/templates/index.tpl");
-		$this->getSitesInfo($view);
+		$this->getSitesInfo($isWidgetized = false);
 	}
 
 	function standalone()
 	{
-		$view = new Piwik_View("MultiSites/templates/standalone.tpl");
-		$this->getSitesInfo($view);
+		$this->getSitesInfo($isWidgetized = true);
 	}
 
 
-	public function getSitesInfo($view)
+	public function getSitesInfo($isWidgetized)
 	{
 		Piwik::checkUserHasSomeViewAccess();
 		$displayRevenueColumn = Piwik_Common::isGoalPluginEnabled();
-		
-		// overwrites the default Date set in the parent controller 
-		// Instead of the default current website's local date, 
+
+		$date = Piwik_Common::getRequestVar('date', 'today');
+		$period = Piwik_Common::getRequestVar('period', 'day');
+		$siteIds = Piwik_SitesManager_API::getInstance()->getSitesIdWithAtLeastViewAccess();
+		list($minDate, $maxDate) = $this->getMinMaxDateAcrossWebsites($siteIds);
+
+		// overwrites the default Date set in the parent controller
+		// Instead of the default current website's local date,
 		// we set "today" or "yesterday" based on the default Piwik timezone
 		$piwikDefaultTimezone = Piwik_SitesManager_API::getInstance()->getDefaultTimezone();
-		$dateRequest = Piwik_Common::getRequestVar('date', 'today');
-		$period = Piwik_Common::getRequestVar('period', 'day');	
-		$date = $dateRequest;
 		if($period != 'range')
 		{
-			$date = $this->getDateParameterInTimezone($dateRequest, $piwikDefaultTimezone);
+			$date = $this->getDateParameterInTimezone($date, $piwikDefaultTimezone);
+			$this->setDate($date);
 			$date = $date->toString();
 		}
-		$siteIds = Piwik_SitesManager_API::getInstance()->getSitesIdWithAtLeastViewAccess();
 		$dataTable = Piwik_MultiSites_API::getInstance()->getAll($period, $date, $segment = false);
 
-		list($minDate, $maxDate) = $this->getMinMaxDateAcrossWebsites($siteIds);
 
 		// put data into a form the template will understand better
 		$digestableData = array();
@@ -128,21 +126,21 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 		
 		$this->applyPrettyMoney($digestableData);
 
+		$view = new Piwik_View("MultiSites/templates/index.tpl");
+		$view->isWidgetized = $isWidgetized;
 		$view->sitesData = array_values($digestableData);
 		$view->evolutionBy = $this->evolutionBy;
 		$view->period = $period;
-		$view->dateRequest = $dateRequest;
 		$view->page = $this->page;
 		$view->limit = $this->limit;
 		$view->orderBy = $this->orderBy;
 		$view->order = $this->order;
 		$view->totalVisits = $dataTable->getMetadata('total_nb_visits');
 		$view->totalRevenue = $dataTable->getMetadata('total_revenue');
-		
+
 		$view->displayRevenueColumn = $displayRevenueColumn;
 		$view->totalPageviews = $dataTable->getMetadata('total_nb_pageviews');
 		$view->pastTotalVisits = $dataTable->getMetadata('last_period_total_nb_visits');
-		
 		$view->totalVisitsEvolution = $dataTable->getMetadata('total_visits_evolution');
 		if ($view->totalVisitsEvolution > 0)
 		{
@@ -156,7 +154,7 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 		}
 	
 		$params = $this->getGraphParamsModified();
-		$view->dateSparkline = $period == 'range' ? $dateRequest : $params['date'];
+		$view->dateSparkline = $period == 'range' ? $date : $params['date'];
 		
 		$view->autoRefreshTodayReport = false;
 		// if the current date is today, or yesterday, 
@@ -175,7 +173,7 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 
 		echo $view->render();
 	}
-	
+
 	/**
 	 * The Multisites reports displays the first calendar date as the earliest day available for all websites.
 	 * Also, today is the later "today" available across all timezones.

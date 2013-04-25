@@ -5,7 +5,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Widgetize.php 6828 2012-08-18 22:48:37Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Widgetize
@@ -52,7 +51,6 @@ class Piwik_Widgetize extends Piwik_Plugin
 	{
 		$jsFiles = &$notification->getNotificationObject();
 
-		$jsFiles[] = "libs/swfobject/swfobject.js";
 		$jsFiles[] = "libs/jquery/jquery.tooltip.js";
 		$jsFiles[] = "libs/jquery/jquery.truncate.js";
 		$jsFiles[] = "libs/jquery/jquery.scrollTo.js";

@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Login.php 6900 2012-09-02 11:14:40Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_Login
@@ -46,11 +45,12 @@ class Piwik_Login extends Piwik_Plugin
 	 */
 	function noAccess( $notification )
 	{
+		/* @var Exception  $exception */
 		$exception  = $notification->getNotificationObject();
 		$exceptionMessage = $exception->getMessage();
 
 		$controller = new Piwik_Login_Controller();
-		$controller->login($exceptionMessage);
+		$controller->login($exceptionMessage, '' /* $exception->getTraceAsString() */ );
 	}
 
 	/**
@@ -76,10 +76,13 @@ class Piwik_Login extends Piwik_Plugin
 	{
 		$auth = new Piwik_Login_Auth();
 		Zend_Registry::set('auth', $auth);
-
+		
+		$allowCookieAuthentication = $notification->getNotificationInfo();
+		
 		$action = Piwik::getAction();
-		if(Piwik::getModule() === 'API'
-			&& (empty($action) || $action == 'index'))
+		if (Piwik::getModule() === 'API'
+			&& (empty($action) || $action == 'index')
+			&& $allowCookieAuthentication !== true)
 		{
 			return;
 		}

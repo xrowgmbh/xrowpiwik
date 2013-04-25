@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DBStats.php 6324 2012-05-26 19:39:16Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_DBStats
@@ -38,7 +37,7 @@ class Piwik_DBStats extends Piwik_Plugin
 	
 	function addMenu()
 	{
-		Piwik_AddAdminMenu('DBStats_DatabaseUsage', 
+		Piwik_AddAdminSubMenu('CoreAdminHome_MenuDiagnostic', 'DBStats_DatabaseUsage', 
 							array('module' => 'DBStats', 'action' => 'index'),
 							Piwik::isUserIsSuperUser(),
 							$order = 9);		
@@ -52,10 +51,14 @@ class Piwik_DBStats extends Piwik_Plugin
 	public function getScheduledTasks($notification)
 	{
 		$tasks = &$notification->getNotificationObject();
-		
-		$priority = Piwik_ScheduledTask::LOWEST_PRIORITY;
+
 		$cacheDataByArchiveNameReportsTask = new Piwik_ScheduledTask(
-			$this, 'cacheDataByArchiveNameReports', new Piwik_ScheduledTime_Weekly(), $priority);
+			$this,
+			'cacheDataByArchiveNameReports',
+			null,
+			new Piwik_ScheduledTime_Weekly(),
+			Piwik_ScheduledTask::LOWEST_PRIORITY
+		);
 		$tasks[] = $cacheDataByArchiveNameReportsTask;
 	}
 	

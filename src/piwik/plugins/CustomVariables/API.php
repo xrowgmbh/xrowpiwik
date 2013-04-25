@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 5779 2012-02-08 02:09:36Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CustomVariables
@@ -31,9 +30,16 @@ class Piwik_CustomVariables_API
 		return self::$instance;
 	}
 
-	/**
-	 * @return Piwik_DataTable
-	 */
+    /**
+     * @param int        $idSite
+     * @param string     $period
+     * @param Piwik_Date $date
+     * @param string     $segment
+     * @param bool       $expanded
+     * @param int        $idSubtable
+     *
+     * @return Piwik_DataTable|Piwik_DataTable_Array
+     */
 	protected function getDataTable($idSite, $period, $date, $segment, $expanded, $idSubtable)
 	{
 		$dataTable = Piwik_Archive::getDataTableFromArchive('CustomVariables_valueByName', $idSite, $period, $date, $segment, $expanded, $idSubtable);
@@ -42,9 +48,16 @@ class Piwik_CustomVariables_API
 		return $dataTable;
 	}
 
-	/**
-	 * @return Piwik_DataTable
-	 */
+    /**
+     * @param int               $idSite
+     * @param string            $period
+     * @param Piwik_Date        $date
+     * @param string|bool       $segment
+     * @param bool              $expanded
+     * @param bool              $_leavePiwikCoreVariables
+     *
+     * @return Piwik_DataTable|Piwik_DataTable_Array
+     */
 	public function getCustomVariables($idSite, $period, $date, $segment = false, $expanded = false, $_leavePiwikCoreVariables = false)
 	{
 		$dataTable = $this->getDataTable($idSite, $period, $date, $segment, $expanded, $idSubtable = null);
@@ -52,7 +65,7 @@ class Piwik_CustomVariables_API
 		if($dataTable instanceof Piwik_DataTable
 			&& !$_leavePiwikCoreVariables)
 		{
-			$mapping = array('_pks', '_pkn', '_pkc', '_pkp');
+			$mapping = array('_pks', '_pkn', '_pkc', '_pkp', Piwik_Tracker_Action::CVAR_KEY_SEARCH_COUNT, Piwik_Tracker_Action::CVAR_KEY_SEARCH_CATEGORY );
 			foreach($mapping as $name)
 			{
 				$row = $dataTable->getRowFromLabel($name);
@@ -65,9 +78,16 @@ class Piwik_CustomVariables_API
 		return $dataTable;
 	}
 
-	/**
-	 * @return Piwik_DataTable
-	 */
+    /**
+     * @param int            $idSite
+     * @param string         $period
+     * @param Piwik_Date     $date
+     * @param int            $idSubtable
+     * @param string|bool    $segment
+     * @param bool           $_leavePriceViewedColumn
+     *
+     * @return Piwik_DataTable|Piwik_DataTable_Array
+     */
 	public function getCustomVariablesValuesFromNameId($idSite, $period, $date, $idSubtable, $segment = false, $_leavePriceViewedColumn = false)
 	{
 		$dataTable = $this->getDataTable($idSite, $period, $date, $segment, $expanded = false, $idSubtable);

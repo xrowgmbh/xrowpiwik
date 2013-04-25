@@ -8,14 +8,14 @@
 <link rel="stylesheet" type="text/css" href="themes/default/common.css" />
 <link rel="stylesheet" type="text/css" href="libs/jquery/themes/base/jquery-ui.css" />
 <link rel="stylesheet" type="text/css" href="themes/default/styles.css" />
-
+<link rel="shortcut icon" href="plugins/CoreHome/templates/images/favicon.ico" />
 <script type="text/javascript" src="libs/jquery/jquery.js"></script>
 <script type="text/javascript" src="libs/jquery/jquery-ui.js"></script>
 
 {literal}
 <script type="text/javascript">
 $(document).ready( function(){
-	$('#toFade').fadeOut(4000, function(){ $(this).css('display', 'hidden'); } );
+	$('#toFade').fadeOut(4000, function(){ $(this).show().css({visibility:'hidden'}); } );
 	$('input:first').focus();
 	$('#progressbar').progressbar({
 {/literal}
@@ -32,7 +32,6 @@ $(document).ready( function(){
 {/if}
 </head>
 <body>
-{include file="default/ie6.tpl"}
 <div id="main">
 	<div id="content">
 		<div id="logo">
@@ -51,13 +50,13 @@ $(document).ready( function(){
 		<div id="detailInstall">
 			{if isset($showNextStepAtTop) && $showNextStepAtTop}
 				<p class="nextStep">
-					<a href="{url action=$nextModuleName}">{'General_Next'|translate} &raquo;</a>
+					<a class="submit" href="{url action=$nextModuleName}">{'General_Next'|translate} &raquo;</a>
 				</p>
 			{/if}
 			{include file="$subTemplateToLoad"}
 			{if $showNextStep}
 				<p class="nextStep">
-					<a href="{url action=$nextModuleName}">{'General_Next'|translate} &raquo;</a>
+					<a class="submit" href="{url action=$nextModuleName}">{'General_Next'|translate} &raquo;</a>
 				</p>
 			{/if}
 		</div>

@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: function.url.php 4311 2011-04-04 18:49:55Z vipsoft $
  * 
  * @category Piwik
  * @package SmartyPlugins

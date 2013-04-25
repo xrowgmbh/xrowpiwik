@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6095 2012-03-22 17:27:26Z EZdesign $
  *
  * @category Piwik_Plugins
  * @package Piwik_ExampleUI
@@ -104,11 +103,11 @@ class Piwik_ExampleUI_Controller extends Piwik_Controller
 	function sparklines()
 	{
 		require_once PIWIK_INCLUDE_PATH . '/core/SmartyPlugins/function.sparkline.php';
-		$srcSparkline1 = Piwik_Url::getCurrentQueryStringWithParametersModified(array('action'=>'generateSparkline', 'server' => 'server1', 'rand'=>rand()));
+		$srcSparkline1 = Piwik_Url::getCurrentQueryStringWithParametersModified(array('action'=>'generateSparkline', 'server' => 'server1', 'rand'=>mt_rand()));
 		$htmlSparkline1 = smarty_function_sparkline(array('src' => $srcSparkline1));
 		echo "<div class='sparkline'>$htmlSparkline1 Evolution of temperature for server piwik.org</div>";
 		
-		$srcSparkline2 = Piwik_Url::getCurrentQueryStringWithParametersModified(array('action'=>'generateSparkline', 'server' => 'server2', 'rand'=>rand()));
+		$srcSparkline2 = Piwik_Url::getCurrentQueryStringWithParametersModified(array('action'=>'generateSparkline', 'server' => 'server2', 'rand'=>mt_rand()));
 		$htmlSparkline2 = smarty_function_sparkline(array('src' => $srcSparkline2));
 		echo "<div class='sparkline'>$htmlSparkline2 Evolution of temperature for server dev.piwik.org</div>";
 	}

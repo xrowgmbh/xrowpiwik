@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: AllColumns.php 6398 2012-05-30 09:03:12Z matt $
  * 
  * @category Piwik
  * @package Piwik

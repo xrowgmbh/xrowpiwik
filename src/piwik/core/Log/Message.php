@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Message.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -18,23 +17,26 @@
  */
 class Piwik_Log_Message extends Piwik_Log
 {
-	const ID = 'logger_message.htm';
+	const ID = 'logger_message';
 
 	/**
 	 * Constructor
 	 */
 	function __construct()
 	{
-		$logToFileFilename = self::ID;
+		$logToFileFilename = self::ID.".htm";
 		$logToDatabaseTableName = self::ID;
-		$logToDatabaseColumnMapping = null;
+		$logToDatabaseColumnMapping = array(
+			'message' => 'message',
+			'timestamp' => 'timestamp'
+		);
 		$screenFormatter = new Piwik_Log_Message_Formatter_ScreenFormatter();
 		$fileFormatter = new Piwik_Log_Formatter_FileFormatter();
-		
-		parent::__construct($logToFileFilename, 
+
+		parent::__construct($logToFileFilename,
 							$fileFormatter,
 							$screenFormatter,
-							$logToDatabaseTableName, 
+							$logToDatabaseTableName,
 							$logToDatabaseColumnMapping );
 	}
 

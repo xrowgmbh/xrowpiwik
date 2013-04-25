@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: tcpdf_config.php 4224 2011-03-29 01:12:05Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports

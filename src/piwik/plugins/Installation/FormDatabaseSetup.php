@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FormDatabaseSetup.php 6642 2012-08-02 04:27:50Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Installation

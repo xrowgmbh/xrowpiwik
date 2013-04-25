@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VerticalBar.php 5451 2011-11-18 12:38:15Z EZdesign $
  *
  * @category Piwik
  * @package Piwik

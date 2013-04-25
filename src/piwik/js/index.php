@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: index.php 4642 2011-05-05 21:23:12Z matt $
  */
 
 /**

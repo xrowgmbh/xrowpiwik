@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6485 2012-06-20 03:57:35Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_PrivacyManager
@@ -97,11 +96,17 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		
 		echo $view->render();
 	}
-
-	private function isDntSupport()
+	
+	/**
+	 * Returns true if server side DoNotTrack support is enabled, false if otherwise.
+	 * 
+	 * @return bool
+	 */
+	public static function isDntSupported()
 	{
 		return Piwik_PluginsManager::getInstance()->isPluginActivated('DoNotTrack');
 	}
+	
 	public function privacySettings()
 	{
 		Piwik::checkUserHasSomeAdminAccess();
@@ -109,11 +114,9 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 
 		if (Piwik::isUserIsSuperUser())
 		{
-			$deleteLogs = array();
-
 			$view->deleteData = $this->getDeleteDataInfo();
 			$view->anonymizeIP = $this->getAnonymizeIPInfo();
-			$view->dntSupport = $this->isDntSupport();
+			$view->dntSupport = self::isDntSupported();
 			$view->canDeleteLogActions = Piwik::isLockPrivilegeGranted();
 			$view->dbUser = Piwik_Config::getInstance()->database['username'];
 		}
@@ -210,7 +213,9 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 					}
 					else // if just deleting rows
 					{
-						$totalAfterPurge -= ($tableTotalBytes / $status['Rows']) * $deletedDataSummary[$tableName];
+						if($status['Rows'] > 0) {
+							$totalAfterPurge -= ($tableTotalBytes / $status['Rows']) * $deletedDataSummary[$tableName];
+						}
 					}
 				}
 			}
@@ -246,7 +251,7 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		$deleteDataInfos["deleteTables"] =
 			"<br/>".implode(", ", Piwik_PrivacyManager_LogDataPurger::getDeleteTableLogTables());
 
-		$scheduleTimetable = $taskScheduler->getScheduledTimeForTask("Piwik_PrivacyManager", "deleteLogTables");
+		$scheduleTimetable = $taskScheduler->getScheduledTimeForMethod("Piwik_PrivacyManager", "deleteLogTables");
 
 		$optionTable = Piwik_GetOption(self::OPTION_LAST_DELETE_PIWIK_LOGS);
 

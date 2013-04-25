@@ -4,7 +4,6 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Dashboard.php 6958 2012-09-10 07:17:48Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Dashboard
@@ -43,9 +42,7 @@ class Piwik_Dashboard extends Piwik_Plugin
 		$pos = 0;
 		$nameless = 1;
 		foreach ($dashboards AS &$dashboard) {
-			if (!empty($dashboard['name'])) {
-				$dashboard['name'] = $dashboard['name'];
-			} else {
+			if (empty($dashboard['name'])) {
 				$dashboard['name'] = Piwik_Translate('Dashboard_DashboardOf', $login);
 				if($nameless > 1) {
 					$dashboard['name'] .= " ($nameless)";

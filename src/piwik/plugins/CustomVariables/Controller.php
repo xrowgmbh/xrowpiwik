@@ -4,7 +4,6 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5456 2011-11-21 21:07:38Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_CustomVariables
@@ -36,7 +35,7 @@ class Piwik_CustomVariables_Controller extends Piwik_Controller
 		$view->setColumnTranslation('label', Piwik_Translate('CustomVariables_ColumnCustomVariableName'));
 		$view->setSortedColumn( 'nb_visits'	 );
 		$view->setLimit( 10 );
-		$view->setFooterMessage( 'Help: <a target="_blank" href="http://piwik.org/docs/custom-variables/">Tracking Custom Variables in Piwik</a>');
+		$view->setFooterMessage( Piwik_Translate('CustomVariables_TrackingHelp', array('<a target="_blank" href="http://piwik.org/docs/custom-variables/">', '</a>')) );
 		$this->setMetricsVariablesView($view);
 		return $this->renderView($view, $fetch);
 	}
