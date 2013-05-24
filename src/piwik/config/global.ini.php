@@ -307,6 +307,13 @@ api_service_url = http://api.piwik.org
 ; eg. $period=range&date=previous10 becomes $period=day&date=previous10. Use this setting to override the $period value.
 graphs_default_period_to_plot_when_period_range = day
 
+; The Overlay plugin shows the Top X following pages, Top X downloads and Top X outlinks which followed
+; a view of the current page. The value X can be set here.
+overlay_following_pages_limit = 300
+
+; With this option, you can disable the framed mode of the Overlay plugin. Use it if your website contains a framebuster.
+overlay_disable_framed_mode = 0
+
 [Tracker]
 ; Piwik uses first party cookies by default. If set to 1,
 ; the visit ID cookie will be set on the Piwik server domain as well
@@ -336,6 +343,12 @@ record_statistics			= 1
 ; length of a visit in seconds. If a visitor comes back on the website visit_standard_length seconds
 ; after his last page view, it will be recorded as a new visit
 visit_standard_length       = 1800
+
+; The window to look back for a previous visit by this current visitor. Defaults to visit_standard_length.
+; If you are looking for higher accuracy of "returning visitors" metrics, you may set this value to 86400 or more.
+; This is especially useful when you use the Tracking API where tracking Returning Visitors often depends on this setting.
+; The value window_look_back_for_visitor is used only if it is set to greater than visit_standard_length
+window_look_back_for_visitor = 0
 
 ; visitors that stay on the website and view only one page will be considered as time on site of 0 second
 default_time_one_page_visit = 0
@@ -369,10 +382,19 @@ campaign_keyword_var_name	= "pk_kwd,piwik_kwd,utm_term"
 ; maximum length of a Page Title or a Page URL recorded in the log_action.name table
 page_maximum_length = 1024;
 
+; By default, when a request is identified as a "Internal Site Search", the URL will not be recorded. This is for performance reasons
+; (the less unique URLs in Piwik the better). Piwik will track, for each Site Search: "Search Keyword",
+; and optionally the "Search Category" and "Search result count". You can set this to 1 to enable tracking Site Search URLs.
+action_sitesearch_record_url = 0
+
 ; Anonymize a visitor's IP address after testing for "Ip exclude"
 ; This value is the number of octets in IP address to mask; if the AnonymizeIP plugin is deactivated, this value is ignored.
 ; For IPv4 addresses, valid values are 0..4; for IPv6 addresses, valid values are 0..16
 ip_address_mask_length = 1
+
+; Tracker cache files are the simple caching layer for Tracking.
+; TTL: Time to live for cache files, in seconds. Default to 5 minutes.
+tracker_cache_file_ttl = 300
 
 ; DO NOT USE THIS SETTING ON PUBLICLY AVAILABLE PIWIK SERVER
 ; !!! Security risk: if set to 0, it would allow anyone to push data to Piwik with custom dates in the past/future and with fake IPs !!!
@@ -471,6 +493,7 @@ Plugins[] 		= CoreHome
 Plugins[] 		= Proxy
 Plugins[] 		= API
 Plugins[] 		= Widgetize
+Plugins[] 		= Transitions
 Plugins[] 		= LanguagesManager
 Plugins[] 		= Actions
 Plugins[] 		= Dashboard
@@ -488,7 +511,6 @@ Plugins[] 		= VisitorInterest
 Plugins[] 		= ExampleAPI
 Plugins[] 		= ExamplePlugin
 Plugins[]		= ExampleRssWidget
-Plugins[] 		= ExampleFeedburner
 Plugins[] 		= Provider
 Plugins[]		= Feedback
 
@@ -504,6 +526,9 @@ Plugins[]		= CustomVariables
 Plugins[]		= PrivacyManager
 Plugins[]		= ImageGraph
 Plugins[]		= DoNotTrack
+Plugins[]		= Annotations
+Plugins[]		= MobileMessaging
+Plugins[]		= Overlay
 
 [PluginsInstalled]
 PluginsInstalled[] = Login
@@ -516,6 +541,7 @@ PluginsInstalled[] = Installation
 Plugins_Tracker[] = Provider
 Plugins_Tracker[] = Goals
 Plugins_Tracker[] = DoNotTrack
+Plugins_Tracker[] = UserCountry
 
 [APISettings]
 ; Any key/value pair can be added in this section, they will be available via the REST call
