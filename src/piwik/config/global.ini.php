@@ -280,6 +280,10 @@ assume_secure_protocol = 0
 ; List of proxy IP addresses (or IP address ranges) to skip (if present in the above headers).
 ; Generally, only required if there's more than one proxy between the visitor and the backend web server.
 ;
+; Whether to enable trusted host checking. This can be disabled if you're running Piwik
+; on several URLs and do not wish to constantly edit the trusted host list.
+enable_trusted_host_check = 0
+;
 ; Examples:
 ;proxy_ips[] = 204.93.240.*
 ;proxy_ips[] = 204.93.177.0/24
