@@ -48,6 +48,23 @@ class xrowPiwikServerCallFunctions
                         piwikTracker.enableLinkTracking();
                    }
                    catch( err ) {}
+                        
+                   <!-- SecondPiwikID Feature -->
+                   jQuery(document).ready(function($)
+                   {
+                       var pkBaseURL = \"" . $piwikRequest ."/\";
+                       try
+                       {
+                           if (!isNaN($(\"body\").attr(\"data-piwikID\")) && $(\"body\").attr(\"data-piwikID\") > 0)
+                           {
+                               var secondpiwikid=$(\"body\").attr(\"data-piwikID\");
+                               var piwikTracker2 = Piwik.getTracker(pkBaseURL + \"\", secondpiwikid );
+                               piwikTracker2.trackPageView();
+                               piwikTracker2.enableLinkTracking();
+                           }
+                       }
+                       catch( err ) {}
+                   });
                    <!-- End Piwik Tracking Code -->";
         return $return;
     }
