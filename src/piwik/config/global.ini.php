@@ -191,7 +191,7 @@ login_cookie_expire = 1209600
 
 ; The path on the server in which the cookie will be available on.
 ; Defaults to empty. See spec in http://curl.haxx.se/rfc/cookie_spec.html
-login_cookie_path = "/"
+login_cookie_path =
 
 ; email address that appears as a Sender in the password recovery email
 ; if specified, {DOMAIN} will be replaced by the current Piwik domain
@@ -339,7 +339,7 @@ cookie_expire = 63072000
 ; The path on the server in which the cookie will be available on.
 ; Defaults to empty. See spec in http://curl.haxx.se/rfc/cookie_spec.html
 ; This is used for the Ignore cookie, and the third party cookie if use_third_party_id_cookie = 1
-cookie_path =
+cookie_path = /
 
 ; set to 0 if you want to stop tracking the visitors. Useful if you need to stop all the connections on the DB.
 record_statistics			= 1
