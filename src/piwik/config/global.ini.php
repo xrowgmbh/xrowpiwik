@@ -191,7 +191,7 @@ login_cookie_expire = 1209600
 
 ; The path on the server in which the cookie will be available on.
 ; Defaults to empty. See spec in http://curl.haxx.se/rfc/cookie_spec.html
-login_cookie_path =
+login_cookie_path = "/"
 
 ; email address that appears as a Sender in the password recovery email
 ; if specified, {DOMAIN} will be replaced by the current Piwik domain
