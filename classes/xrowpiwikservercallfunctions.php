@@ -34,21 +34,32 @@ class xrowPiwikServerCallFunctions
     {
         $xp_ini = eZINI::instance('xrowpiwik.ini');
         $siteID = 1;
+        $disableCookies = false;
         if( $xp_ini->hasVariable('General', 'PiwikSiteID') )
         {
             $siteID = (int) trim($xp_ini->variable('General', 'PiwikSiteID'));
+        }
+        if( $xp_ini->hasVariable('General', 'DisableCookies') && trim($xp_ini->variable('General', 'DisableCookies')) == 'enabled')
+        {
+            $disableCookies = true;
         }
         $piwikRequest = "/ezjscore/call/xrowpiwik::piwik";
         $return = file_get_contents("extension/xrowpiwik/src/piwik/piwik.js");
         $return .="<!-- Piwik -->
                    var pkBaseURL = \"" . $piwikRequest ."/\";
                    try {
-                        var piwikTracker = Piwik.getTracker(pkBaseURL + \"\", " . $siteID . ");
+                        var piwikTracker = Piwik.getTracker(pkBaseURL + \"\", " . $siteID . ");";
+        if($disableCookies)
+        {
+            $return .="
+                        piwikTracker.disableCookies();";
+        }
+        $return .="
                         piwikTracker.trackPageView();
                         piwikTracker.enableLinkTracking();
                    }
                    catch( err ) {}
-                        
+
                    <!-- SecondPiwikID Feature -->
                    jQuery(document).ready(function($)
                    {
@@ -58,7 +69,13 @@ class xrowPiwikServerCallFunctions
                            if (!isNaN($(\"body\").attr(\"data-piwikID\")) && $(\"body\").attr(\"data-piwikID\") > 0)
                            {
                                var secondpiwikid=$(\"body\").attr(\"data-piwikID\");
-                               var piwikTracker2 = Piwik.getTracker(pkBaseURL + \"\", secondpiwikid );
+                               var piwikTracker2 = Piwik.getTracker(pkBaseURL + \"\", secondpiwikid );";
+        if($disableCookies)
+        {
+            $return .="
+                               piwikTracker2.disableCookies();";
+        }
+        $return .="
                                piwikTracker2.trackPageView();
                                piwikTracker2.enableLinkTracking();
                            }
@@ -69,4 +86,3 @@ class xrowPiwikServerCallFunctions
         return $return;
     }
 }
-?>
