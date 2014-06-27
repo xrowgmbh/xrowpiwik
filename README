@@ -10,6 +10,12 @@ You need do perform the following steps:
 -- <add input="{URL}" pattern="extension/xrowpiwik/src/piwik/" ignoreCase="false" />
 - adjust DB-Connection in /extension/settings/config.ini.append.php
 - insert mysql schema+data from extension\xrowpiwik\doc\mysql_schema\xrowpiwik_clean.sql
+- Fix Piwik permissions
+mkdir -p extension/xrowpiwik/src/piwik/tmp/
+mkdir -p extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
+chmod 777 extension/xrowpiwik/src/piwik/tmp/
+chmod 777 extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
+
 
 Standard User: admin / admin
 Multi-User_setup can be established by providing different SiteIDs per siteaccess in xrowpiwik.ini.append.php
