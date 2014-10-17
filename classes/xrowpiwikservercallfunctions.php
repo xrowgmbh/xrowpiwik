@@ -43,6 +43,9 @@ class xrowPiwikServerCallFunctions
         {
             $disableCookies = true;
         }
+        $rootUrl = "//" . eZSys::hostname() . self::getIndexDir();
+        $piwikRequest = $rootUrl . "/ezjscore/call/xrowpiwik::piwik";
+
         $piwikRequest = "/ezjscore/call/xrowpiwik::piwik";
         $return = file_get_contents("extension/xrowpiwik/src/piwik/piwik.js");
         $return .="<!-- Piwik -->
