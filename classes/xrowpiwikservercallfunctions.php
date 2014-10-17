@@ -43,7 +43,7 @@ class xrowPiwikServerCallFunctions
         {
             $disableCookies = true;
         }
-        $rootUrl = "//" . eZSys::hostname() . eZSys::getIndexDir();
+        $rootUrl = "//" . eZSys::hostname() . eZSys::indexDir();
         $piwikRequest = $rootUrl . "/ezjscore/call/xrowpiwik::piwik";
 
         $piwikRequest = "/ezjscore/call/xrowpiwik::piwik";
