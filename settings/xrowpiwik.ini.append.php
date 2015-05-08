@@ -9,4 +9,12 @@
 #NodeID[]
 #NodeID[<nodeID>]=<PiwikMandantenID>
 
+#[ThirdPiwikID]
+#NodeID[]
+#NodeID[<nodeID>]=<PiwikMandantenID>
+
+#[IndexPiwikID]
+#NodeID[]
+#NodeID[<nodeID>]=<PiwikMandantenID>
+
 */ ?>

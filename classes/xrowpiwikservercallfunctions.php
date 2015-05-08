@@ -85,6 +85,55 @@ class xrowPiwikServerCallFunctions
                        }
                        catch( err ) {}
                    });
+                
+                <!-- ThirdPiwikID Feature -->
+                   jQuery(document).ready(function($)
+                   {
+                       var pkBaseURL = \"" . $piwikRequest ."/\";
+                       try
+                       {
+                           if (!isNaN($(\"body\").attr(\"data-piwik3ID\")) && $(\"body\").attr(\"data-piwik3ID\") > 0)
+                           {
+                               var thirdpiwikid=$(\"body\").attr(\"data-piwik3ID\");
+                               var piwikTracker3 = Piwik.getTracker(pkBaseURL + \"\", thirdpiwikid );";
+        if($disableCookies)
+        {
+            $return .="
+                               piwikTracker3.disableCookies();";
+        }
+        $return .="
+                               piwikTracker3.trackPageView();
+                               piwikTracker3.enableLinkTracking();
+                           }
+                       }
+                       catch( err ) {}
+                   });
+                
+                
+                <!-- HomePiwikID Feature -->
+                   jQuery(document).ready(function($)
+                   {
+                       var pkBaseURL = \"" . $piwikRequest ."/\";
+                       try
+                       {
+                           if (!isNaN($(\"body\").attr(\"data-piwikIndexID\")) && $(\"body\").attr(\"data-piwikIndexID\") > 0)
+                           {
+                               var indexpiwikid=$(\"body\").attr(\"data-piwikIndexID\");
+                               var piwikTracker4 = Piwik.getTracker(pkBaseURL + \"\", indexpiwikid );";
+        if($disableCookies)
+        {
+            $return .="
+                               piwikTracker4.disableCookies();";
+        }
+        $return .="
+                               piwikTracker4.trackPageView();
+                               piwikTracker4.enableLinkTracking();
+                           }
+                       }
+                       catch( err ) {}
+                   });
+                
+                
                    <!-- End Piwik Tracking Code -->";
         return $return;
     }
