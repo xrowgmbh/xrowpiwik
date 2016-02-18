@@ -1,101 +1,130 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik_Plugins
- * @package Piwik_MobileMessaging_SMSProvider
  */
+
+namespace Piwik\Plugins\MobileMessaging\SMSProvider;
+
+use Exception;
+use Piwik\Http;
+use Piwik\Plugins\MobileMessaging\APIException;
+use Piwik\Plugins\MobileMessaging\SMSProvider;
 
 require_once PIWIK_INCLUDE_PATH . "/plugins/MobileMessaging/APIException.php";
+
 /**
- *
- * @package Piwik_MobileMessaging_SMSProvider
+ * @ignore
  */
-class Piwik_MobileMessaging_SMSProvider_Clockwork extends Piwik_MobileMessaging_SMSProvider
+class Clockwork extends SMSProvider
 {
-	const SOCKET_TIMEOUT = 15;
+    const SOCKET_TIMEOUT = 15;
 
-	const BASE_API_URL = 'https://api.mediaburst.co.uk/http';
-	const CHECK_CREDIT_RESOURCE = '/credit.aspx';
-	const SEND_SMS_RESOURCE = '/send.aspx';
+    const BASE_API_URL = 'https://api.mediaburst.co.uk/http';
+    const CHECK_CREDIT_RESOURCE = '/credit.aspx';
+    const SEND_SMS_RESOURCE = '/send.aspx';
 
-	const ERROR_STRING = 'Error';
+    const ERROR_STRING = 'Error';
 
-	const MAXIMUM_FROM_LENGTH = 11;
-	const MAXIMUM_CONCATENATED_SMS = 3;
+    const MAXIMUM_FROM_LENGTH = 11;
+    const MAXIMUM_CONCATENATED_SMS = 3;
 
-	public function verifyCredential($apiKey)
-	{
-		$this->getCreditLeft($apiKey);
+    public function getId()
+    {
+        return 'Clockwork';
+    }
 
-		return true;
-	}
+    public function getDescription()
+    {
+        return 'You can use <a target="_blank" href="?module=Proxy&action=redirect&url=http://www.clockworksms.com/platforms/piwik/"><img src="plugins/MobileMessaging/images/Clockwork.png"/></a> to send SMS Reports from Piwik.<br/>
+			<ul>
+			<li> First, <a target="_blank" href="?module=Proxy&action=redirect&url=http://www.clockworksms.com/platforms/piwik/">get an API Key from Clockwork</a> (Signup is free!)
+			</li><li> Enter your Clockwork API Key on this page. </li>
+			</ul>
+			<br/><em>About Clockwork: </em><ul>
+			<li>Clockwork gives you fast, reliable high quality worldwide SMS delivery, over 450 networks in every corner of the globe.
+			</li><li>Cost per SMS message is around ~0.08USD (0.06EUR).
+			</li><li>Most countries and networks are supported but we suggest you check the latest position on their coverage map <a target="_blank" href="?module=Proxy&action=redirect&url=http://www.clockworksms.com/sms-coverage/">here</a>.
+			</li>
+			</ul>
+			';
+    }
 
-	public function sendSMS($apiKey, $smsText, $phoneNumber, $from)
-	{
-		$from = substr($from, 0, self::MAXIMUM_FROM_LENGTH);
+    public function verifyCredential($apiKey)
+    {
+        $this->getCreditLeft($apiKey);
 
-		$smsText = self::truncate($smsText, self::MAXIMUM_CONCATENATED_SMS);
+        return true;
+    }
 
-		$additionalParameters = array(
-			'To' => str_replace('+','', $phoneNumber),
-			'Content' => $smsText,
-			'From' => $from,
-			'Long' => 1,
-			'MsgType' => self::containsUCS2Characters($smsText) ? 'UCS2' : 'TEXT',
-		);
+    public function sendSMS($apiKey, $smsText, $phoneNumber, $from)
+    {
+        $from = substr($from, 0, self::MAXIMUM_FROM_LENGTH);
 
-		$this->issueApiCall(
-			$apiKey,
-			self::SEND_SMS_RESOURCE,
-			$additionalParameters
-		);
-	}
+        $smsText = self::truncate($smsText, self::MAXIMUM_CONCATENATED_SMS);
 
-	private function issueApiCall($apiKey, $resource, $additionalParameters = array())
-	{
-		$accountParameters = array(
-			'Key' => $apiKey,
-		);
+        $additionalParameters = array(
+            'To'      => str_replace('+', '', $phoneNumber),
+            'Content' => $smsText,
+            'From'    => $from,
+            'Long'    => 1,
+            'MsgType' => self::containsUCS2Characters($smsText) ? 'UCS2' : 'TEXT',
+        );
 
-		$parameters = array_merge($accountParameters, $additionalParameters);
+        $this->issueApiCall(
+            $apiKey,
+            self::SEND_SMS_RESOURCE,
+            $additionalParameters
+        );
+    }
 
-		$url = self::BASE_API_URL
-				. $resource
-				. '?' . http_build_query($parameters, '', '&');
+    private function issueApiCall($apiKey, $resource, $additionalParameters = array())
+    {
+        $accountParameters = array(
+            'Key' => $apiKey,
+        );
 
-		$timeout = self::SOCKET_TIMEOUT;
+        $parameters = array_merge($accountParameters, $additionalParameters);
 
-		$result = Piwik_Http::sendHttpRequestBy(
-			Piwik_Http::getTransportMethod(),
-			$url,
-			$timeout,
-			$userAgent = null,
-			$destinationPath = null,
-			$file = null,
-			$followDepth = 0,
-			$acceptLanguage = false,
-			$acceptInvalidSslCertificate = true
-		);
+        $url = self::BASE_API_URL
+            . $resource
+            . '?' . http_build_query($parameters, '', '&');
 
-		if(strpos($result, self::ERROR_STRING) !== false)
-		{
-			throw new Piwik_MobileMessaging_APIException(
-				'Clockwork API returned the following error message : ' . $result
-			);
-		}
+        $timeout = self::SOCKET_TIMEOUT;
 
-		return $result;
-	}
+        try {
+            $result = Http::sendHttpRequestBy(
+                Http::getTransportMethod(),
+                $url,
+                $timeout,
+                $userAgent = null,
+                $destinationPath = null,
+                $file = null,
+                $followDepth = 0,
+                $acceptLanguage = false,
+                $acceptInvalidSslCertificate = true
+            );
+        } catch (Exception $e) {
+            $result = self::ERROR_STRING . " " . $e->getMessage();
+        }
 
-	public function getCreditLeft($apiKey)
-	{
-		return $this->issueApiCall(
-					$apiKey,
-					self::CHECK_CREDIT_RESOURCE
-				);
-	}
+        if (strpos($result, self::ERROR_STRING) !== false) {
+            throw new APIException(
+                'Clockwork API returned the following error message : ' . $result
+            );
+        }
+
+        return $result;
+    }
+
+    public function getCreditLeft($apiKey)
+    {
+        return $this->issueApiCall(
+            $apiKey,
+            self::CHECK_CREDIT_RESOURCE
+        );
+    }
 }

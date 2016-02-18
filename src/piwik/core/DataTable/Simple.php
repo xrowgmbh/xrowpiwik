@@ -1,51 +1,38 @@
 <?php
 /**
- * Piwik - Open source web analytics
- * 
+ * Piwik - free/libre analytics platform
+ *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * 
- * @category Piwik
- * @package Piwik
+ *
  */
+namespace Piwik\DataTable;
+
+use Piwik\DataTable;
 
 /**
- * The DataTable_Simple is used to provide an easy way to create simple DataGrid.
- * A DataTable_Simple actually is a DataTable with 2 columns: 'label' and 'value'.
- * 
- * It is usually best to return a DataTable_Simple instead of 
- * a PHP array (or other custom data structure) in API methods:
- * - the generic filters can be applied automatically (offset, limit, pattern search, sort, etc.)
- * - the renderer can be applied (XML, PHP, HTML, etc.)
- * So you don't have to write specific renderer for your data, it is already available in all the formats supported natively by Piwik.
- * 
- * @package Piwik
- * @subpackage Piwik_DataTable
+ * A {@link Piwik\DataTable} where every row has two columns: **label** and **value**.
+ *
+ * Simple DataTables are only used to slightly alter the output of some renderers
+ * (notably the XML renderer).
+ *
+ * @api
  */
-class Piwik_DataTable_Simple extends Piwik_DataTable
+class Simple extends DataTable
 {
-	/**
-	 * Loads (append) in the DataTable the array information
-	 *
-	 * @param array  $array  Array containing the rows information
-	 *                       array(
-	 *                             'Label row 1' => Value row 1,
-	 *                             'Label row 2' => Value row 2,
-	 *                       )
-	 */
-	public function addRowsFromArray($array)
-	{
-		$this->addRowsFromSimpleArray(array($array));
-	}
-
-	/**
-	 * Updates the given column with the given value
-	 *
-	 * @param string  $columnName
-	 * @param mixed   $value
-	 */
-	public function setColumn($columnName, $value)
-	{
-		$this->getLastRow()->setColumn($columnName, $value);
-	}
+    /**
+     * Adds rows based on an array mapping label column values to value column
+     * values.
+     *
+     * @param array $array Array containing the rows, eg,
+     *
+     *                         array(
+     *                             'Label row 1' => $value1,
+     *                             'Label row 2' => $value2,
+     *                         )
+     */
+    public function addRowsFromArray($array)
+    {
+        $this->addRowsFromSimpleArray(array($array));
+    }
 }

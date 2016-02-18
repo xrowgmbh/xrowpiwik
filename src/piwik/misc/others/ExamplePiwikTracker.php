@@ -4,8 +4,8 @@
 require_once '../../libs/PiwikTracker/PiwikTracker.php';
 PiwikTracker::$URL = 'http://localhost/trunk/';
 
-$piwikTracker = new PiwikTracker( $idSite = 1 );
-// You can manually set the Visitor details (resolution, time, plugins)  
+$piwikTracker = new PiwikTracker($idSite = 1);
+// You can manually set the Visitor details (resolution, time, plugins)
 // See all other ->set* functions available in the PiwikTracker class
 $piwikTracker->setResolution(1600, 1400);
 

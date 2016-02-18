@@ -1,109 +1,104 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Piwik
  */
+namespace Piwik\Db;
+
+use Zend_Db_Table;
 
 /**
- * @package Piwik
- * @subpackage Piwik_Db
  */
-class Piwik_Db_Adapter
+class Adapter
 {
-	/**
-	 * Create adapter
-	 *
-	 * @param string $adapterName database adapter name
-	 * @param array $dbInfos database connection info
-	 * @param bool $connect
-	 * @return Piwik_Db_Adapter_Interface
-	 */
-	public static function factory($adapterName, & $dbInfos, $connect = true)
-	{
-		if($connect)
-		{
-			if($dbInfos['port'][0] == '/')
-			{
-				$dbInfos['unix_socket'] = $dbInfos['port'];
-				unset($dbInfos['host']);
-				unset($dbInfos['port']);
-			}
+    /**
+     * Create adapter
+     *
+     * @param string $adapterName database adapter name
+     * @param array $dbInfos database connection info
+     * @param bool $connect
+     * @return AdapterInterface
+     */
+    public static function factory($adapterName, & $dbInfos, $connect = true)
+    {
+        if ($connect) {
+            if ($dbInfos['port'][0] == '/') {
+                $dbInfos['unix_socket'] = $dbInfos['port'];
+                unset($dbInfos['host']);
+                unset($dbInfos['port']);
+            }
 
-			// not used by Zend Framework
-			unset($dbInfos['tables_prefix']);
-			unset($dbInfos['adapter']);
-			unset($dbInfos['schema']);
-		}
+            // not used by Zend Framework
+            unset($dbInfos['tables_prefix']);
+            unset($dbInfos['adapter']);
+            unset($dbInfos['schema']);
+        }
 
-		$className = self::getAdapterClassName($adapterName);
-		Piwik_Loader::loadClass($className);
+        $className = self::getAdapterClassName($adapterName);
 
-		/*
-		 * 5.2.1 fixes various bugs with references that caused PDO_MYSQL getConnection()
-		 * to clobber $dbInfos. (#33282, #35106, #39944)
-		 */
-		if (version_compare(PHP_VERSION, '5.2.1') < 0)
-		{
-			$adapter = new $className(array_map('trim', $dbInfos));
-		}
-		else
-		{
-			$adapter = new $className($dbInfos);
-		}
+        // make sure not to pass any references otherwise they will modify $dbInfos
+        $infos = array();
+        foreach ($dbInfos as $key => $val) {
+            $infos[$key] = $val;
+        }
 
-		if($connect)
-		{
-			$adapter->getConnection();
+        $adapter   = new $className($infos);
 
-			Zend_Db_Table::setDefaultAdapter($adapter);
-			// we don't want the connection information to appear in the logs
-			$adapter->resetConfig();
-		}
+        if ($connect) {
+            $adapter->getConnection();
 
-		return $adapter;
-	}
+            Zend_Db_Table::setDefaultAdapter($adapter);
+            // we don't want the connection information to appear in the logs
+            $adapter->resetConfig();
+        }
 
-	/**
-	 * Get adapter class name
-	 *
-	 * @param string  $adapterName
-	 * @return string
-	 */
-	private static function getAdapterClassName($adapterName)
-	{
-		return 'Piwik_Db_Adapter_' . str_replace(' ', '_', ucwords(str_replace('_', ' ', strtolower($adapterName))));
-	}
+        return $adapter;
+    }
 
-	/**
-	 * Get default port for named adapter
-	 *
-	 * @param string  $adapterName
-	 * @return int
-	 */
-	public static function getDefaultPortForAdapter($adapterName)
-	{
-		$className = self::getAdapterClassName($adapterName);
-		return call_user_func(array($className, 'getDefaultPort'));
-	}
+    /**
+     * Get adapter class name
+     *
+     * @param string $adapterName
+     * @return string
+     * @throws \Exception
+     */
+    private static function getAdapterClassName($adapterName)
+    {
+        $className = 'Piwik\Db\Adapter\\' . str_replace(' ', '\\', ucwords(str_replace(array('_', '\\'), ' ', strtolower($adapterName))));
+        if (!class_exists($className)) {
+            throw new \Exception("Adapter $adapterName is not valid.");
+        }
+        return $className;
+    }
 
-	/**
-	 * Get list of adapters
-	 *
-	 * @return array
-	 */
-	public static function getAdapters()
-	{
-		static $adapterNames = array(
-			// currently supported by Piwik
-			'Pdo_Mysql',
-			'Mysqli',
+    /**
+     * Get default port for named adapter
+     *
+     * @param string $adapterName
+     * @return int
+     */
+    public static function getDefaultPortForAdapter($adapterName)
+    {
+        $className = self::getAdapterClassName($adapterName);
+        return call_user_func(array($className, 'getDefaultPort'));
+    }
 
-			// other adapters supported by Zend_Db
+    /**
+     * Get list of adapters
+     *
+     * @return array
+     */
+    public static function getAdapters()
+    {
+        static $adapterNames = array(
+            // currently supported by Piwik
+            'Pdo\Mysql',
+            'Mysqli',
+
+            // other adapters supported by Zend_Db
 //			'Pdo_Pgsql',
 //			'Pdo_Mssql',
 //			'Sqlsrv',
@@ -111,19 +106,17 @@ class Piwik_Db_Adapter
 //			'Db2',
 //			'Pdo_Oci',
 //			'Oracle',
-		);
+        );
 
-		$adapters = array();
+        $adapters = array();
 
-		foreach($adapterNames as $adapterName)
-		{
-			$className = 'Piwik_Db_Adapter_'.$adapterName;
-			if(call_user_func(array($className, 'isEnabled')))
-			{
-				$adapters[strtoupper($adapterName)] = call_user_func(array($className, 'getDefaultPort'));
-			}
-		}
+        foreach ($adapterNames as $adapterName) {
+            $className = '\Piwik\Db\Adapter\\' . $adapterName;
+            if (call_user_func(array($className, 'isEnabled'))) {
+                $adapters[strtoupper($adapterName)] = call_user_func(array($className, 'getDefaultPort'));
+            }
+        }
 
-		return $adapters;
-	}
+        return $adapters;
+    }
 }

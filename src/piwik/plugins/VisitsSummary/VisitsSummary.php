@@ -1,84 +1,74 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik_Plugins
- * @package Piwik_VisitsSummary
  */
+namespace Piwik\Plugins\VisitsSummary;
+use Piwik\DataTable;
+use Piwik\Plugins\CoreHome\Columns\UserId;
+use Piwik\Plugins\VisitsSummary\Reports\Get;
 
 /**
  * Note: This plugin does not hook on Daily and Period Archiving like other Plugins because it reports the
  * very core metrics (visits, actions, visit duration, etc.) which are processed in the Core
- * Piwik_ArchiveProcessing_Day class directly.
+ * Day class directly.
  * These metrics can be used by other Plugins so they need to be processed up front.
  *
- * @package Piwik_VisitsSummary
  */
-class Piwik_VisitsSummary extends Piwik_Plugin
+class VisitsSummary extends \Piwik\Plugin
 {
-	public function getInformation()
-	{
-		$info = array(
-			'description' => Piwik_Translate('VisitsSummary_PluginDescription'),
-			'author' => 'Piwik',
-			'author_homepage' => 'http://piwik.org/',
-			'version' => Piwik_Version::VERSION,
-		);
-		return $info;
-	}
-	
-	function getListHooksRegistered()
-	{
-		return array(
-			'API.getReportMetadata' => 'getReportMetadata',
-			'WidgetsList.add' => 'addWidgets',
-			'Menu.add' => 'addMenu',
-		);
-	}
+    /**
+     * @see Piwik\Plugin::registerEvents
+     */
+    public function registerEvents()
+    {
+        return array(
+            'AssetManager.getStylesheetFiles' => 'getStylesheetFiles',
+            'API.API.getProcessedReport.end' => 'enrichProcessedReportIfVisitsSummaryGet',
+        );
+    }
 
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	public function getReportMetadata($notification)
-	{
-		$reports = &$notification->getNotificationObject();
-		$reports[] = array(
-			'category' => Piwik_Translate('VisitsSummary_VisitsSummary'),
-			'name' => Piwik_Translate('VisitsSummary_VisitsSummary'),
-			'module' => 'VisitsSummary',
-			'action' => 'get',
-			'metrics' => array(
-								'nb_uniq_visitors',
-								'nb_visits',
-								'nb_actions',
-								'nb_actions_per_visit',
-								'bounce_rate',
-								'avg_time_on_site' => Piwik_Translate('General_VisitDuration'),
-								'max_actions' => Piwik_Translate('General_ColumnMaxActions'),
-// Used to process metrics, not displayed/used directly
-//								'sum_visit_length',
-//								'nb_visits_converted',
-			),
-			'processedMetrics' => false,
-			'order' => 1
-		);
-	}
-	
-	function addWidgets()
-	{
-		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitsSummary_WidgetLastVisits', 'VisitsSummary', 'getEvolutionGraph', array('columns' => array('nb_visits')));		
-		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitsSummary_WidgetVisits', 'VisitsSummary', 'getSparklines');
-		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitsSummary_WidgetOverviewGraph', 'VisitsSummary', 'index');
-	}
-	
-	function addMenu()
-	{
-		Piwik_AddMenu('General_Visitors', '', array('module' => 'VisitsSummary', 'action' => 'index'), true, 10);
-		Piwik_AddMenu('General_Visitors', 'VisitsSummary_SubmenuOverview', array('module' => 'VisitsSummary', 'action' => 'index'), true, 1);
-	}
+    private function isRequestingVisitsSummaryGet($module, $method)
+    {
+        return ($module === 'VisitsSummary' && $method === 'get');
+    }
+
+    public function enrichProcessedReportIfVisitsSummaryGet(&$response, $infos)
+    {
+        if (empty($infos['parameters'][4]) || empty($response['reportData'])) {
+            return;
+        }
+
+        $params  = $infos['parameters'];
+        $idSites = array($params[0]);
+        $period  = $params[1];
+        $date    = $params[2];
+        $module  = $params[3];
+        $method  = $params[4];
+
+        if (!$this->isRequestingVisitsSummaryGet($module, $method)) {
+            return;
+        }
+
+        $userId = new UserId();
+
+        /** @var DataTable|DataTable\Map $dataTable */
+        $dataTable = $response['reportData'];
+
+        if (!$userId->hasDataTableUsers($dataTable) &&
+            !$userId->isUsedInAtLeastOneSite($idSites, $period, $date)) {
+            $report = new Get();
+            $report->removeUsersFromProcessedReport($response);
+        }
+    }
+
+    public function getStylesheetFiles(&$stylesheets)
+    {
+        $stylesheets[] = "plugins/VisitsSummary/stylesheets/datatable.less";
+    }
+
 }
-
 

@@ -1,41 +1,60 @@
 <?php
 /**
- * Piwik - Open source web analytics
- * 
+ * Piwik - free/libre analytics platform
+ *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * 
- * @category Piwik_Plugins
- * @package Piwik_CorePluginsAdmin
- */
-
-/**
  *
- * @package Piwik_CorePluginsAdmin
  */
-class Piwik_CorePluginsAdmin extends Piwik_Plugin
+namespace Piwik\Plugins\CorePluginsAdmin;
+
+use Piwik\Config;
+use Piwik\Plugin;
+
+class CorePluginsAdmin extends \Piwik\Plugin
 {
-	public function getInformation()
-	{
-		return array(
-			'description' => Piwik_Translate('CorePluginsAdmin_PluginDescription'),
-			'author' => 'Piwik',
-			'author_homepage' => 'http://piwik.org/',
-			'version' => Piwik_Version::VERSION,
-		);
-	}
-	
-	function getListHooksRegistered()
-	{
-		return array('AdminMenu.add' => 'addMenu');
-	}
-	
-	function addMenu()
-	{
-		Piwik_AddAdminSubMenu('CorePluginsAdmin_MenuPlugins', null, "", Piwik::isUserIsSuperUser(), $order = 15);
-		Piwik_AddAdminSubMenu('CorePluginsAdmin_MenuPlugins', 'CorePluginsAdmin_MenuPluginsInstalled',
-							array('module' => 'CorePluginsAdmin', 'action' => 'index'),
-							Piwik::isUserIsSuperUser(),
-							$order = 1);
-	}
+    /**
+     * @see Piwik\Plugin::registerEvents
+     */
+    public function registerEvents()
+    {
+        return array(
+            'AssetManager.getJavaScriptFiles'        => 'getJsFiles',
+            'AssetManager.getStylesheetFiles'        => 'getStylesheetFiles',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys'
+        );
+    }
+
+    public function getStylesheetFiles(&$stylesheets)
+    {
+        $stylesheets[] = "plugins/CorePluginsAdmin/stylesheets/marketplace.less";
+        $stylesheets[] = "plugins/CorePluginsAdmin/stylesheets/plugins_admin.less";
+        $stylesheets[] = "plugins/CorePluginsAdmin/stylesheets/plugin-details.less";
+    }
+
+    public static function isMarketplaceEnabled()
+    {
+        return (bool) Config::getInstance()->General['enable_marketplace'];
+    }
+
+    public static function isPluginsAdminEnabled()
+    {
+        return (bool) Config::getInstance()->General['enable_plugins_admin'];
+    }
+
+    public function getJsFiles(&$jsFiles)
+    {
+        $jsFiles[] = "libs/bower_components/jQuery.dotdotdot/src/js/jquery.dotdotdot.min.js";
+        $jsFiles[] = "plugins/CoreHome/javascripts/popover.js";
+        $jsFiles[] = "plugins/CorePluginsAdmin/javascripts/marketplace.js";
+        $jsFiles[] = "plugins/CorePluginsAdmin/javascripts/pluginOverview.js";
+        $jsFiles[] = "plugins/CorePluginsAdmin/javascripts/pluginExtend.js";
+        $jsFiles[] = "plugins/CorePluginsAdmin/javascripts/plugins.js";
+    }
+
+    public function getClientSideTranslationKeys(&$translations)
+    {
+        $translations[] = 'CorePluginsAdmin_NoZipFileSelected';
+    }
+
 }

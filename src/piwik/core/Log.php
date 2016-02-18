@@ -1,200 +1,247 @@
 <?php
 /**
- * Piwik - Open source web analytics
- * 
+ * Piwik - free/libre analytics platform
+ *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * 
- * @category Piwik
- * @package Piwik
  */
 
+namespace Piwik;
+
+use Monolog\Logger;
+use Piwik\Container\StaticContainer;
+use Psr\Log\LoggerInterface;
+
 /**
- * 
- * @package Piwik
- * @subpackage Piwik_Log
- * @see Zend_Log, libs/Zend/Log.php
- * @link http://framework.zend.com/manual/en/zend.log.html 
+ * Logging utility class.
+ *
+ * Log entries are made with a message and log level. The logging utility will tag each
+ * log entry with the name of the plugin that's doing the logging. If no plugin is found,
+ * the name of the current class is used.
+ *
+ * You can log messages using one of the public static functions (eg, 'error', 'warning',
+ * 'info', etc.).
+ *
+ * Currently, Piwik supports the following logging backends:
+ *
+ * - **screen**: logging to the screen
+ * - **file**: logging to a file
+ * - **database**: logging to Piwik's MySQL database
+ *
+ * Messages logged in the console will always be logged to the console output.
+ *
+ * ### Logging configuration
+ *
+ * The logging utility can be configured by manipulating the INI config options in the
+ * `[log]` section.
+ *
+ * The following configuration options can be set:
+ *
+ * - `log_writers[]`: This is an array of log writer IDs. The three log writers provided
+ *                    by Piwik core are **file**, **screen** and **database**. You can
+ *                    get more by installing plugins. The default value is **screen**.
+ * - `log_level`: The current log level. Can be **ERROR**, **WARN**, **INFO**, **DEBUG**,
+ *                or **VERBOSE**. Log entries made with a log level that is as or more
+ *                severe than the current log level will be outputted. Others will be
+ *                ignored. The default level is **WARN**.
+ * - `logger_file_path`: For the file log writer, specifies the path to the log file
+ *                       to log to or a path to a directory to store logs in. If a
+ *                       directory, the file name is piwik.log. Can be relative to
+ *                       Piwik's root dir or an absolute path. Defaults to **tmp/logs**.
+ *
+ *
+ * @deprecated Inject and use Psr\Log\LoggerInterface instead of this class.
+ * @see \Psr\Log\LoggerInterface
  */
-abstract class Piwik_Log extends Zend_Log
+class Log extends Singleton
 {
-	protected $logToDatabaseTableName = null;
-	protected $logToDatabaseColumnMapping = null;
-	protected $logToFileFilename = null;
-	protected $fileFormatter = null;
-	protected $screenFormatter = null;
-	protected $currentRequestKey;
-	
-	function __construct( 	$logToFileFilename, 
-							$fileFormatter,
-							$screenFormatter,
-							$logToDatabaseTableName, 
-							$logToDatabaseColumnMapping )
-	{
-		parent::__construct();
-		
-		$this->currentRequestKey = substr( Piwik_Common::generateUniqId(), 0, 8);
+    // log levels
+    const NONE = 0;
+    const ERROR = 1;
+    const WARN = 2;
+    const INFO = 3;
+    const DEBUG = 4;
+    const VERBOSE = 5;
 
-		$log_dir = Piwik_Config::getInstance()->log['logger_file_path'];
-		if($log_dir[0] != '/' && $log_dir[0] != DIRECTORY_SEPARATOR)
-		{
-			$log_dir = PIWIK_USER_PATH . '/' . $log_dir;
-		}
-		$this->logToFileFilename = $log_dir . '/' . $logToFileFilename;
+    // config option names
+    const LOG_LEVEL_CONFIG_OPTION = 'log_level';
+    const LOG_WRITERS_CONFIG_OPTION = 'log_writers';
+    const LOGGER_FILE_PATH_CONFIG_OPTION = 'logger_file_path';
+    const STRING_MESSAGE_FORMAT_OPTION = 'string_message_format';
 
-		$this->fileFormatter = $fileFormatter;
-		$this->screenFormatter = $screenFormatter;
-		$this->logToDatabaseTableName = Piwik_Common::prefixTable($logToDatabaseTableName);
-		$this->logToDatabaseColumnMapping = $logToDatabaseColumnMapping;
-	}
-	
-	function addWriteToFile()
-	{
-		Piwik_Common::mkdir(dirname($this->logToFileFilename));
-		$writerFile = new Zend_Log_Writer_Stream($this->logToFileFilename);
-		$writerFile->setFormatter( $this->fileFormatter );
-		$this->addWriter($writerFile);
-	}
-	
-	function addWriteToNull()
-	{
-		$this->addWriter( new Zend_Log_Writer_Null );
-	}
-	
-	function addWriteToDatabase()
-	{
-		$writerDb = new Zend_Log_Writer_Db(
-								Zend_Registry::get('db'), 
-								$this->logToDatabaseTableName, 
-								$this->logToDatabaseColumnMapping);
-		
-		$this->addWriter($writerDb);
-	}
-	
-	function addWriteToScreen()
-	{
-		$writerScreen = new Zend_Log_Writer_Stream('php://output');
-		$writerScreen->setFormatter( $this->screenFormatter );
-		$this->addWriter($writerScreen);
-	}
-	
-	public function getWritersCount()
-	{
-		return count($this->_writers);
-	}
+    /**
+     * The backtrace string to use when testing.
+     *
+     * @var string
+     */
+    public static $debugBacktraceForTests;
 
-	/**
-	 * Log an event
-	 * @param string $event
-	 * @param int $priority
-	 * @param null $extras
-	 * @throws Zend_Log_Exception
-	 * @return void
-	 */
-	public function log($event, $priority, $extras = null)
-	{
-		// sanity checks
-		if (empty($this->_writers)) {
-			throw new Zend_Log_Exception('No writers were added');
-		}
+    /**
+     * Singleton instance.
+     *
+     * @var Log
+     */
+    private static $instance;
 
-		$event['timestamp'] = date('Y-m-d H:i:s');
-		$event['requestKey'] = $this->currentRequestKey;
-		// pack into event required by filters and writers
-		$event = array_merge( $event, $this->_extras);
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
-		// one message must stay on one line
-		if(isset($event['message']))
-		{
-			$event['message'] = str_replace(array(PHP_EOL, "\n"), " ", $event['message']);
-		}
-		
-		// Truncate the backtrace which can be too long to display in the browser
-		if(!empty($event['backtrace']))
-		{
-			$maxSizeOutputBytes = 1024 * 1024; // no more than 1M output please
-			$truncateBacktraceLineAfter = 1000;
-			$maxLines = ceil($maxSizeOutputBytes / $truncateBacktraceLineAfter);
-			$bt = explode("\n", $event['backtrace']);
-			foreach($bt as $count => &$line)
-			{
-				if(strlen($line) > $truncateBacktraceLineAfter)
-				{
-					$line = substr($line, 0, $truncateBacktraceLineAfter) . '...';
-				}
-				if($count > $maxLines)
-				{
-					$line .= "\nTruncated error message.";
-					break;
-				}
-			}
-			$event['backtrace'] = implode("\n", $bt);
-		}
-		// abort if rejected by the global filters
-		foreach ($this->_filters as $filter) {
-			if (! $filter->accept($event)) {
-				return;
-			}
-		}
+    public static function getInstance()
+    {
+        if (self::$instance === null) {
+            self::$instance = StaticContainer::get(__CLASS__);
+        }
+        return self::$instance;
+    }
+    public static function unsetInstance()
+    {
+        self::$instance = null;
+    }
+    public static function setSingletonInstance($instance)
+    {
+        self::$instance = $instance;
+    }
 
-		// send to each writer
-		foreach ($this->_writers as $writer) {
-			$writer->write($event);
-		}
-	}
+    /**
+     * @param LoggerInterface $logger
+     */
+    public function __construct(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
 
-}
+    /**
+     * Logs a message using the ERROR log level.
+     *
+     * @param string $message The log message. This can be a sprintf format string.
+     * @param ... mixed Optional sprintf params.
+     * @api
+     *
+     * @deprecated Inject and call Psr\Log\LoggerInterface::error() instead.
+     * @see \Psr\Log\LoggerInterface::error()
+     */
+    public static function error($message /* ... */)
+    {
+        self::logMessage(Logger::ERROR, $message, array_slice(func_get_args(), 1));
+    }
 
-/**
- * 
- * @package Piwik
- * @subpackage Piwik_Log
- */
-class Piwik_Log_Formatter_FileFormatter implements Zend_Log_Formatter_Interface
-{	
-	/**
-	 * Formats data into a single line to be written by the writer.
-	 *
-	 * @param  array    $event    event data
-	 * @return string             formatted line to write to the log
-	 */
-	public function format($event)
-	{
-		foreach($event as &$value)
-		{
-			$value = str_replace("\n", '\n', $value);
-			$value = '"'.$value.'"';
-		}
-		$ts = $event['timestamp'];
-		unset($event['timestamp']);
-		return $ts . ' ' . implode(" ", $event) . "\n";
-	}
-}
+    /**
+     * Logs a message using the WARNING log level.
+     *
+     * @param string $message The log message. This can be a sprintf format string.
+     * @param ... mixed Optional sprintf params.
+     * @api
+     *
+     * @deprecated Inject and call Psr\Log\LoggerInterface::warning() instead.
+     * @see \Psr\Log\LoggerInterface::warning()
+     */
+    public static function warning($message /* ... */)
+    {
+        self::logMessage(Logger::WARNING, $message, array_slice(func_get_args(), 1));
+    }
 
-/**
- * 
- * @package Piwik
- * @subpackage Piwik_Log
- */
-class Piwik_Log_Formatter_ScreenFormatter implements Zend_Log_Formatter_Interface
-{
-	function formatEvent($event)
-	{
-		// no injection in error messages, backtrace when displayed on screen
-		return array_map(array('Piwik_Common','sanitizeInputValue'), $event);
-	}
+    /**
+     * Logs a message using the INFO log level.
+     *
+     * @param string $message The log message. This can be a sprintf format string.
+     * @param ... mixed Optional sprintf params.
+     * @api
+     *
+     * @deprecated Inject and call Psr\Log\LoggerInterface::info() instead.
+     * @see \Psr\Log\LoggerInterface::info()
+     */
+    public static function info($message /* ... */)
+    {
+        self::logMessage(Logger::INFO, $message, array_slice(func_get_args(), 1));
+    }
 
-	function format($string)
-	{
-		return self::getFormattedString($string);
-	}
-	
-	static public function getFormattedString($string)
-	{
-		if(!Piwik_Common::isPhpCliMode())
-		{
-			@header('Content-Type: text/html; charset=utf-8');
-		}
-		return $string;
-	}
+    /**
+     * Logs a message using the DEBUG log level.
+     *
+     * @param string $message The log message. This can be a sprintf format string.
+     * @param ... mixed Optional sprintf params.
+     * @api
+     *
+     * @deprecated Inject and call Psr\Log\LoggerInterface::debug() instead.
+     * @see \Psr\Log\LoggerInterface::debug()
+     */
+    public static function debug($message /* ... */)
+    {
+        self::logMessage(Logger::DEBUG, $message, array_slice(func_get_args(), 1));
+    }
+
+    /**
+     * Logs a message using the VERBOSE log level.
+     *
+     * @param string $message The log message. This can be a sprintf format string.
+     * @param ... mixed Optional sprintf params.
+     * @api
+     *
+     * @deprecated Inject and call Psr\Log\LoggerInterface::debug() instead (the verbose level doesn't exist in the PSR standard).
+     * @see \Psr\Log\LoggerInterface::debug()
+     */
+    public static function verbose($message /* ... */)
+    {
+        self::logMessage(Logger::DEBUG, $message, array_slice(func_get_args(), 1));
+    }
+
+    /**
+     * @param int $logLevel
+     * @deprecated Will be removed, log levels are now applied on each Monolog handler.
+     */
+    public function setLogLevel($logLevel)
+    {
+    }
+
+    /**
+     * @deprecated Will be removed, log levels are now applied on each Monolog handler.
+     */
+    public function getLogLevel()
+    {
+    }
+
+    private function doLog($level, $message, $parameters = array())
+    {
+        // To ensure the compatibility with PSR-3, the message must be a string
+        if ($message instanceof \Exception) {
+            $parameters['exception'] = $message;
+            $message = $message->getMessage();
+        }
+
+        if (is_object($message) || is_array($message) || is_resource($message)) {
+            $this->logger->warning('Trying to log a message that is not a string', array(
+                'exception' => new \InvalidArgumentException('Trying to log a message that is not a string')
+            ));
+            return;
+        }
+
+        $this->logger->log($level, $message, $parameters);
+    }
+
+    private static function logMessage($level, $message, $parameters)
+    {
+        self::getInstance()->doLog($level, $message, $parameters);
+    }
+
+    public static function getMonologLevel($level)
+    {
+        switch ($level) {
+            case self::ERROR:
+                return Logger::ERROR;
+            case self::WARN:
+                return Logger::WARNING;
+            case self::INFO:
+                return Logger::INFO;
+            case self::DEBUG:
+                return Logger::DEBUG;
+            case self::VERBOSE:
+                return Logger::DEBUG;
+            case self::NONE:
+            default:
+                // Highest level possible, need to do better in the future...
+                return Logger::EMERGENCY;
+        }
+    }
 }

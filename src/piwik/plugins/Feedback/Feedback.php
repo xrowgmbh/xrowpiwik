@@ -1,69 +1,54 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik_Plugins
- * @package Piwik_Feedback
  */
+namespace Piwik\Plugins\Feedback;
 
 /**
  *
- * @package Piwik_Feedback
  */
-class Piwik_Feedback extends Piwik_Plugin
+class Feedback extends \Piwik\Plugin
 {
-	public function getInformation()
-	{
-		return array(
-			'description' => Piwik_Translate('Feedback_PluginDescription'),
-			'author' => 'Piwik',
-			'author_homepage' => 'http://piwik.org/',
-			'version' => Piwik_Version::VERSION,
-		);
-	}
 
-	function getListHooksRegistered()
-	{
-		return array(
-			'AssetManager.getCssFiles' => 'getCssFiles',
-			'AssetManager.getJsFiles' => 'getJsFiles',
-			'TopMenu.add' => 'addTopMenu',
-		);
-	}
+    /**
+     * @see Piwik\Plugin::registerEvents
+     */
+    public function registerEvents()
+    {
+        return array(
+            'AssetManager.getStylesheetFiles'        => 'getStylesheetFiles',
+            'AssetManager.getJavaScriptFiles'        => 'getJsFiles',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys'
+        );
+    }
 
-	public function addTopMenu()
-	{
-		Piwik_AddTopMenu(
-			'General_GiveUsYourFeedback',
-			array('module' => 'Feedback', 'action' => 'index'),
-			true,
-			$order = 20,
-			$isHTML = false,
-			$tooltip = Piwik_Translate('Feedback_TopLinkTooltip')
-		);
-	}
+    public function getStylesheetFiles(&$stylesheets)
+    {
+        $stylesheets[] = "plugins/Feedback/stylesheets/feedback.less";
+        $stylesheets[] = "plugins/Feedback/angularjs/ratefeature/ratefeature.directive.less";
+    }
 
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function getCssFiles( $notification )
-	{
-		$cssFiles = &$notification->getNotificationObject();
-		
-		$cssFiles[] = "plugins/Feedback/templates/styles.css";
-	}
+    public function getJsFiles(&$jsFiles)
+    {
+        $jsFiles[] = "plugins/Feedback/angularjs/ratefeature/ratefeature-model.service.js";
+        $jsFiles[] = "plugins/Feedback/angularjs/ratefeature/ratefeature.controller.js";
+        $jsFiles[] = "plugins/Feedback/angularjs/ratefeature/ratefeature.directive.js";
+    }
 
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function getJsFiles( $notification )
-	{
-		$jsFiles = &$notification->getNotificationObject();
-		
-		$jsFiles[] = "plugins/Feedback/templates/feedback.js";
-	}	
-	
+    public function getClientSideTranslationKeys(&$translationKeys)
+    {
+        $translationKeys[] = 'Feedback_ThankYou';
+        $translationKeys[] = 'Feedback_RateFeatureTitle';
+        $translationKeys[] = 'Feedback_RateFeatureThankYouTitle';
+        $translationKeys[] = 'Feedback_RateFeatureLeaveMessageLike';
+        $translationKeys[] = 'Feedback_RateFeatureLeaveMessageDislike';
+        $translationKeys[] = 'Feedback_SendFeedback';
+        $translationKeys[] = 'Feedback_RateFeatureSendFeedbackInformation';
+        $translationKeys[] = 'General_Ok';
+        $translationKeys[] = 'General_Cancel';
+    }
 }

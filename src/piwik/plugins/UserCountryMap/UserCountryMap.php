@@ -1,81 +1,76 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik_Plugins
- * @package Piwik_UserCountryMap
  */
+namespace Piwik\Plugins\UserCountryMap;
+
+use Piwik\FrontController;
+use Piwik\Piwik;
+use Piwik\WidgetsList;
+use Piwik\Plugin\Manager as PluginManager;
 
 /**
- *
- * @package Piwik_UserCountryMap
  */
-class Piwik_UserCountryMap extends Piwik_Plugin
+class UserCountryMap extends \Piwik\Plugin
 {
-    public function getInformation()
-    {
-        return array(
-            'name' => 'User Country Map',
-            'description' => 'This plugin provides the widgets Visitor Map and Real-time Map. Note: Requires the UserCountry plugin enabled.',
-            'author' => 'Piwik',
-            'author_homepage' => 'http://piwik.org/',
-            'version' => Piwik_Version::VERSION
-        );
-    }
-
     public function postLoad()
     {
-        Piwik_AddWidget('General_Visitors', Piwik_Translate('UserCountryMap_VisitorMap'), 'UserCountryMap', 'visitorMap');
-        Piwik_AddWidget('Live!', Piwik_Translate('UserCountryMap_RealTimeMap'), 'UserCountryMap', 'realtimeMap');
-
-		Piwik_AddAction('template_leftColumnUserCountry', array('Piwik_UserCountryMap', 'insertMapInLocationReport'));
+        Piwik::addAction('Template.leftColumnUserCountry', array('Piwik\Plugins\UserCountryMap\UserCountryMap', 'insertMapInLocationReport'));
     }
 
-	static public function insertMapInLocationReport($notification)
-	{
-		$out =& $notification->getNotificationObject();
-		$out = '<h2>'.Piwik_Translate('UserCountryMap_VisitorMap').'</h2>';
-		$out .= Piwik_FrontController::getInstance()->fetchDispatch('UserCountryMap','visitorMap');
-	}
+    public static function insertMapInLocationReport(&$out)
+    {
+        $out = '<h2>' . Piwik::translate('UserCountryMap_VisitorMap') . '</h2>';
+        $out .= FrontController::getInstance()->fetchDispatch('UserCountryMap', 'visitorMap');
+    }
 
-	public function getListHooksRegistered()
+    public function registerEvents()
     {
         $hooks = array(
-            'AssetManager.getJsFiles' => 'getJsFiles',
-            'AssetManager.getCssFiles' => 'getCssFiles',
-			'Menu.add' => 'addMenu',
+            'AssetManager.getJavaScriptFiles' => 'getJsFiles',
+            'AssetManager.getStylesheetFiles' => 'getStylesheetFiles',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
+            'Platform.initialized' => array(
+                'after'    => true,
+                'function' => 'registerWidgets'
+            )
         );
         return $hooks;
     }
 
-	function addMenu()
-	{
-		Piwik_AddMenu('General_Visitors', 'UserCountryMap_RealTimeMap', array('module' => 'UserCountryMap', 'action' => 'realtimeWorldMap'), true, $order = 70);
-	}
-
-	/**
-     * @param Piwik_Event_Notification $notification  notification object
-     */
-    public function getJsFiles($notification)
+    public function registerWidgets()
     {
-        $jsFiles = &$notification->getNotificationObject();
-        $jsFiles[] = "plugins/UserCountryMap/js/vendor/raphael-min.js";
-        $jsFiles[] = "plugins/UserCountryMap/js/vendor/jquery.qtip.min.js";
-        $jsFiles[] = "plugins/UserCountryMap/js/vendor/kartograph.min.js";
-        $jsFiles[] = "plugins/UserCountryMap/js/vendor/chroma.min.js";
-        $jsFiles[] = "plugins/UserCountryMap/js/visitor-map.js";
-        $jsFiles[] = "plugins/UserCountryMap/js/realtime-map.js";
+        if (PluginManager::getInstance()->isPluginActivated('UserCountry')) {
+            WidgetsList::add('General_Visitors', Piwik::translate('UserCountryMap_VisitorMap'), 'UserCountryMap', 'visitorMap');
+            WidgetsList::add('Live!', Piwik::translate('UserCountryMap_RealTimeMap'), 'UserCountryMap', 'realtimeMap');
+        }
     }
 
-    public function getCssFiles($notification)
+    public function getJsFiles(&$jsFiles)
     {
-        $cssFiles = &$notification->getNotificationObject();
-        $cssFiles[] = "plugins/UserCountryMap/css/qtip.css";
-        $cssFiles[] = "plugins/UserCountryMap/css/visitor-map.css";
-        $cssFiles[] = "plugins/UserCountryMap/css/realtime-map.css";
+        $jsFiles[] = "libs/bower_components/visibilityjs/lib/visibility.core.js";
+        $jsFiles[] = "plugins/UserCountryMap/javascripts/vendor/raphael.min.js";
+        $jsFiles[] = "plugins/UserCountryMap/javascripts/vendor/jquery.qtip.min.js";
+        $jsFiles[] = "plugins/UserCountryMap/javascripts/vendor/kartograph.min.js";
+        $jsFiles[] = "libs/bower_components/chroma-js/chroma.min.js";
+        $jsFiles[] = "plugins/UserCountryMap/javascripts/visitor-map.js";
+        $jsFiles[] = "plugins/UserCountryMap/javascripts/realtime-map.js";
     }
 
+    public function getStylesheetFiles(&$stylesheets)
+    {
+        $stylesheets[] = "plugins/UserCountryMap/stylesheets/visitor-map.less";
+        $stylesheets[] = "plugins/UserCountryMap/stylesheets/realtime-map.less";
+    }
+
+    public function getClientSideTranslationKeys(&$translationKeys)
+    {
+        $translationKeys[] = 'UserCountryMap_WithUnknownRegion';
+        $translationKeys[] = 'UserCountryMap_WithUnknownCity';
+        $translationKeys[] = 'General_UserId';
+    }
 }

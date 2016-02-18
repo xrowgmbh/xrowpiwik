@@ -1,69 +1,50 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik_Plugins
- * @package Piwik_Annotations
  */
+namespace Piwik\Plugins\Annotations;
 
 /**
  * Annotations plugins. Provides the ability to attach text notes to
  * dates for each sites. Notes can be viewed, modified, deleted or starred.
- * 
- * @package Piwik_Annotations
+ *
  */
-class Piwik_Annotations extends Piwik_Plugin
+class Annotations extends \Piwik\Plugin
 {
-	/**
-	 * Returns information about this plugin.
-	 * 
-	 * @return array
-	 */
-	public function getInformation()
-	{
-		return array(
-			'description' => Piwik_Translate('Annotations_PluginDescription'),
-			'author' => 'Piwik',
-			'author_homepage' => 'http://piwik.org/',
-			'version' => Piwik_Version::VERSION,
-		);
-	}
-	
-	/**
-	 * Returns list of event hooks.
-	 * 
-	 * @return array
-	 */
-	public function getListHooksRegistered()
-	{
-		return array(
-			'AssetManager.getCssFiles' => 'getCssFiles',
-			'AssetManager.getJsFiles' => 'getJsFiles'
-		);
-	}
+    /**
+     * @see Piwik\Plugin::registerEvents
+     */
+    public function registerEvents()
+    {
+        return array(
+            'AssetManager.getStylesheetFiles' => 'getStylesheetFiles',
+            'AssetManager.getJavaScriptFiles' => 'getJsFiles',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
+        );
+    }
 
-	/**
-	 * Adds css files for this plugin to the list in the event notification.
-	 * 
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function getCssFiles( $notification )
-	{
-		$cssFiles = &$notification->getNotificationObject();
-		$cssFiles[] = "plugins/Annotations/templates/styles.css";
-	}
+    public function getClientSideTranslationKeys(&$translationKeys)
+    {
+        $translationKeys[] = 'Intl_Today';
+    }
 
-	/**
-	 * Adds js files for this plugin to the list in the event notification.
-	 * 
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function getJsFiles( $notification )
-	{
-		$jsFiles = &$notification->getNotificationObject();
-		$jsFiles[] = "plugins/Annotations/templates/annotations.js";
-	}
+    /**
+     * Adds css files for this plugin to the list in the event notification.
+     */
+    public function getStylesheetFiles(&$stylesheets)
+    {
+        $stylesheets[] = "plugins/Annotations/stylesheets/annotations.less";
+    }
+
+    /**
+     * Adds js files for this plugin to the list in the event notification.
+     */
+    public function getJsFiles(&$jsFiles)
+    {
+        $jsFiles[] = "plugins/Annotations/javascripts/annotations.js";
+    }
 }

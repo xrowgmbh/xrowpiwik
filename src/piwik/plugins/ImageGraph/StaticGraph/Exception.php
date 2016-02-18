@@ -1,75 +1,78 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik_Plugins
- * @package Piwik_ImageGraph_StaticGraph
  */
+namespace Piwik\Plugins\ImageGraph\StaticGraph;
 
+use pData;
+use Piwik\Plugins\ImageGraph\StaticGraph;
 
 /**
  *
- * @package Piwik_ImageGraph_StaticGraph
  */
-class Piwik_ImageGraph_StaticGraph_Exception extends Piwik_ImageGraph_StaticGraph
+class Exception extends StaticGraph
 {
-	const MESSAGE_RIGHT_MARGIN = 5;
+    const MESSAGE_RIGHT_MARGIN = 5;
 
-	private $exception;
+    /**
+     * @var \Exception
+     */
+    private $exception;
 
-	public function setException($exception)
-	{
-		$this->exception = $exception;
-	}
+    public function setException(\Exception $exception)
+    {
+        $this->exception = $exception;
+    }
 
-	protected function getDefaultColors()
-	{
-		return array();
-	}
+    protected function getDefaultColors()
+    {
+        return array();
+    }
 
+    public function setWidth($width)
+    {
+        if (empty($width)) {
+            $width = 450;
+        }
+        parent::setWidth($width);
+    }
 
-	public function setWidth($width)
-	{
-		if(empty($width)) {
-			$width = 450;
-		}
-		parent::setWidth($width);
-	}
+    public function setHeight($height)
+    {
+        if (empty($height)) {
+            $height = 300;
+        }
+        parent::setHeight($height);
+    }
 
-	public function setHeight($height)
-	{
-		if(empty($height)) {
-			$height = 300;
-		}
-		parent::setHeight($height);
-	}
+    public function renderGraph()
+    {
+        $this->pData = new pData();
 
-	public function renderGraph()
-	{
-		$this->pData = new pData();
+        $message = $this->exception->getMessage();
+        list($textWidth, $textHeight) = $this->getTextWidthHeight($message);
 
-		$message = $this->exception->getMessage();
-		list($textWidth, $textHeight) = $this->getTextWidthHeight($message);
+        if ($this->width == null) {
+            $this->width = $textWidth + self::MESSAGE_RIGHT_MARGIN;
+        }
 
-		if($this->width == null)
-		{
-			$this->width = $textWidth + self::MESSAGE_RIGHT_MARGIN;
-		}
+        if ($this->height == null) {
+            $this->height = $textHeight;
+        }
 
-		if($this->height == null)
-		{
-			$this->height = $textHeight;
-		}
+        $this->initpImage();
 
-		$this->initpImage();
+        $this->drawBackground();
 
-		$this->pImage->drawText(
-			0,
-			$textHeight,
-			$message
-		);
-	}
+        $this->pImage->drawText(
+            0,
+            $textHeight,
+            $message,
+            $this->textColor
+        );
+    }
 }

@@ -1,34 +1,37 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Updates
  */
+
+namespace Piwik\Updates;
+
+use Piwik\Common;
+use Piwik\Updater;
+use Piwik\Updates;
 
 /**
- * @package Updates
  */
-class Piwik_Updates_1_4_rc1 extends Piwik_Updates
+class Updates_1_4_rc1 extends Updates
 {
-	static function getSql($schema = 'Myisam')
-	{
-		return array(
-		    'ALTER TABLE `'. Piwik_Common::prefixTable('pdf') .'`
-		    	ADD COLUMN `format` VARCHAR(10)' => false,
-		    'UPDATE `'. Piwik_Common::prefixTable('pdf') .'`
-		    	SET format = "pdf"' => false,
-		);
-	}
+    public function getMigrationQueries(Updater $updater)
+    {
+        return array(
+            'UPDATE `' . Common::prefixTable('pdf') . '`
+		    	SET format = "pdf"'              => '42S22',
+            'ALTER TABLE `' . Common::prefixTable('pdf') . '`
+		    	ADD COLUMN `format` VARCHAR(10)' => '42S22',
+        );
+    }
 
-	static function update()
-	{
-		try {
-			Piwik_Updater::updateDatabase(__FILE__, self::getSql());
-		}
-		catch(Exception $e){}
-	}
+    public function doUpdate(Updater $updater)
+    {
+        try {
+            $updater->executeMigrationQueries(__FILE__, $this->getMigrationQueries($updater));
+        } catch (\Exception $e) {
+        }
+    }
 }

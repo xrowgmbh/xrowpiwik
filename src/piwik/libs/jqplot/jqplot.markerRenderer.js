@@ -3,8 +3,9 @@
  * Pure JavaScript plotting plugin using jQuery
  *
  * Version: @VERSION
+ * Revision: @REVISION
  *
- * Copyright (c) 2009-2011 Chris Leonello
+ * Copyright (c) 2009-2013 Chris Leonello
  * jqPlot is currently available for use in all personal or commercial projects 
  * under both the MIT (http://www.opensource.org/licenses/mit-license.php) and GPL 
  * version 2.0 (http://www.gnu.org/licenses/gpl-2.0.html) licenses. This means that you can 
@@ -34,7 +35,7 @@
         // Group: Properties
         
         // prop: show
-        // wether or not to show the marker.
+        // whether or not to show the marker.
         this.show = true;
         // prop: style
         // One of diamond, circle, square, x, plus, dash, filledDiamond, filledCircle, filledSquare
@@ -49,7 +50,7 @@
         // color of marker.  Will be set to color of series by default on init.
         this.color = '#666666';
         // prop: shadow
-        // wether or not to draw a shadow on the line
+        // whether or not to draw a shadow on the line
         this.shadow = true;
         // prop: shadowAngle
         // Shadow angle in degrees

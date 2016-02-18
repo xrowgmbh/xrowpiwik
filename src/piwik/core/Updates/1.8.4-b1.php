@@ -1,42 +1,45 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Updates
  */
 
+namespace Piwik\Updates;
+
+use Piwik\Common;
+use Piwik\Updater;
+use Piwik\Updates;
+
 /**
- * @package Updates
  */
-class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
+class Updates_1_8_4_b1 extends Updates
 {
-	
-	static function isMajorUpdate()
-	{
-		return true;
-	}
-	
-	static function getSql($schema = 'Myisam')
-	{
-		$action = Piwik_Common::prefixTable('log_action');
-		$duplicates = Piwik_Common::prefixTable('log_action_duplicates');
-		$visitAction = Piwik_Common::prefixTable('log_link_visit_action');
-		$conversion = Piwik_Common::prefixTable('log_conversion');
-		$visit = Piwik_Common::prefixTable('log_visit');
-		
-		return array(
-			
-		    // add url_prefix column
-			"   ALTER TABLE `$action` 
+
+    public static function isMajorUpdate()
+    {
+        return true;
+    }
+
+    public function getMigrationQueries(Updater $updater)
+    {
+        $action = Common::prefixTable('log_action');
+        $duplicates = Common::prefixTable('log_action_duplicates');
+        $visitAction = Common::prefixTable('log_link_visit_action');
+        $conversion = Common::prefixTable('log_conversion');
+        $visit = Common::prefixTable('log_visit');
+
+        return array(
+
+            // add url_prefix column
+            "   ALTER TABLE `$action`
 		    	ADD `url_prefix` TINYINT(2) NULL AFTER `type`;
-		    " => 1060, // ignore error 1060 Duplicate column name 'url_prefix'
-			
-			// remove protocol and www and store information in url_prefix
-			"   UPDATE `$action`
+		    "                                                                                                     => 1060, // ignore error 1060 Duplicate column name 'url_prefix'
+
+            // remove protocol and www and store information in url_prefix
+            "   UPDATE `$action`
 				SET
 				  url_prefix = IF (
 					LEFT(name, 11) = 'http://www.', 1, IF (
@@ -60,22 +63,22 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 				WHERE
 				  type = 1 AND
 				  url_prefix IS NULL;
-			" => false,
-			
-			// find duplicates
-			"   DROP TABLE IF EXISTS `$duplicates`;
-			" => false,
-			"   CREATE TABLE `$duplicates` (
+			"                                                                      => false,
+
+            // find duplicates
+            "   DROP TABLE IF EXISTS `$duplicates`;
+			"                                                    => false,
+            "   CREATE TABLE `$duplicates` (
 				 `before` int(10) unsigned NOT NULL,
 				 `after` int(10) unsigned NOT NULL,
 				 KEY `mainkey` (`before`)
-				) ENGINE=MyISAM;
-			" => false,
+				) ENGINE=InnoDB;
+			"                                                            => false,
 
-			// grouping by name only would be case-insensitive, so we GROUP BY name,hash
-			// ON (action.type = 1 AND canonical.hash = action.hash) will use index (type, hash)
-			"   INSERT INTO `$duplicates` (
-				  SELECT 
+            // grouping by name only would be case-insensitive, so we GROUP BY name,hash
+            // ON (action.type = 1 AND canonical.hash = action.hash) will use index (type, hash)
+            "   INSERT INTO `$duplicates` (
+				  SELECT
 					action.idaction AS `before`,
 					canonical.idaction AS `after`
 				  FROM
@@ -100,9 +103,9 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 					AND canonical.idaction != action.idaction
 				);
 			" => false,
-			
-			// replace idaction in log_link_visit_action
-			"   UPDATE
+
+            // replace idaction in log_link_visit_action
+            "   UPDATE
 				  `$visitAction` AS link
 				LEFT JOIN
 				  `$duplicates` AS duplicates_idaction_url
@@ -111,8 +114,8 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 				  link.idaction_url = duplicates_idaction_url.after
 				WHERE
 				  duplicates_idaction_url.after IS NOT NULL;
-			" => false,
-			"   UPDATE
+			"                           => false,
+            "   UPDATE
 				  `$visitAction` AS link
 				LEFT JOIN
 				  `$duplicates` AS duplicates_idaction_url_ref
@@ -121,10 +124,10 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 				  link.idaction_url_ref = duplicates_idaction_url_ref.after
 				WHERE
 				  duplicates_idaction_url_ref.after IS NOT NULL;
-			" => false,
-			
-			// replace idaction in log_conversion
-			"   UPDATE
+			"                           => false,
+
+            // replace idaction in log_conversion
+            "   UPDATE
 				  `$conversion` AS conversion
 				LEFT JOIN
 				  `$duplicates` AS duplicates
@@ -133,10 +136,10 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 				  conversion.idaction_url = duplicates.after
 				WHERE
 				  duplicates.after IS NOT NULL;
-			" => false,
-			
-			// replace idaction in log_visit
-			"   UPDATE
+			"                            => false,
+
+            // replace idaction in log_visit
+            "   UPDATE
 				  `$visit` AS visit
 				LEFT JOIN
 				  `$duplicates` AS duplicates_entry
@@ -145,8 +148,8 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 				  visit.visit_entry_idaction_url = duplicates_entry.after
 				WHERE
 				  duplicates_entry.after IS NOT NULL;
-			" => false,
-			"   UPDATE
+			"                                 => false,
+            "   UPDATE
 				  `$visit` AS visit
 				LEFT JOIN
 				  `$duplicates` AS duplicates_exit
@@ -155,36 +158,33 @@ class Piwik_Updates_1_8_4_b1 extends Piwik_Updates
 				  visit.visit_exit_idaction_url = duplicates_exit.after
 				WHERE
 				  duplicates_exit.after IS NOT NULL;
-			" => false,
-			
-			// remove duplicates from log_action
-			"   DELETE action FROM
+			"                                 => false,
+
+            // remove duplicates from log_action
+            "   DELETE action FROM
 				  `$action` AS action
 				LEFT JOIN
 				  `$duplicates` AS duplicates
 				  ON action.idaction = duplicates.before
 				WHERE
 				  duplicates.after IS NOT NULL;
-			" => false,
-			
-			// remove the duplicates table
-			"   DROP TABLE `$duplicates`;
-			" => false
-		);
-	}
+			"                                => false,
 
-	static function update()
-	{
-		try
-		{
-			self::enableMaintenanceMode();
-			Piwik_Updater::updateDatabase(__FILE__, self::getSql());
-			self::disableMaintenanceMode();
-		}
-		catch(Exception $e)
-		{
-			self::disableMaintenanceMode();
-			throw $e;
-		}
-	}
+            // remove the duplicates table
+            "   DROP TABLE `$duplicates`;
+			"                                                              => false
+        );
+    }
+
+    public function doUpdate(Updater $updater)
+    {
+        try {
+            self::enableMaintenanceMode();
+            $updater->executeMigrationQueries(__FILE__, $this->getMigrationQueries($updater));
+            self::disableMaintenanceMode();
+        } catch (\Exception $e) {
+            self::disableMaintenanceMode();
+            throw $e;
+        }
+    }
 }

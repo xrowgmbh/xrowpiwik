@@ -1,92 +1,75 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- *
- * @category Piwik_Plugins
- * @package Piwik_SEO
  */
 
-/**
- * @see plugins/Referers/functions.php
- */
-require_once PIWIK_INCLUDE_PATH . '/plugins/Referers/functions.php';
+namespace Piwik\Plugins\SEO;
+
+use Piwik\DataTable;
+use Piwik\Piwik;
+use Piwik\Plugins\SEO\Metric\Aggregator;
+use Piwik\Plugins\SEO\Metric\Metric;
+use Piwik\Plugins\SEO\Metric\ProviderCache;
+use Piwik\Url;
 
 /**
- * The SEO API lets you access a list of SEO metrics for the specified URL: Google Pagerank, Goolge/Bing indexed pages
+ * @see plugins/Referrers/functions.php
+ * @method static API getInstance()
+ */
+require_once PIWIK_INCLUDE_PATH . '/plugins/Referrers/functions.php';
+
+/**
+ * The SEO API lets you access a list of SEO metrics for the specified URL: Google PageRank, Google/Bing indexed pages
  * Alexa Rank, age of the Domain name and count of DMOZ entries.
- * 
- * @package Piwik_SEO
+ *
+ * @method static API getInstance()
  */
-class Piwik_SEO_API 
+class API extends \Piwik\Plugin\API
 {
-	static private $instance = null;
-	/**
-	 * @return Piwik_SEO_API
-	 */
-	static public function getInstance()
-	{
-		if (self::$instance == null)
-		{
-			self::$instance = new self;
-		}
-		return self::$instance;
-	}
-	
-	/**
-	 * Get rank
-	 *
-	 * @param string $url URL to request Ranks for
-	 * @return Piwik_DataTable
-	 */
-	public function getRank( $url )
-	{
-		Piwik::checkUserHasSomeViewAccess();
-		$rank = new Piwik_SEO_RankChecker($url);
-		
-		$data = array(
-			'Google PageRank' 	=> array(
-				'rank' => $rank->getPageRank(),
-				'logo' => Piwik_getSearchEngineLogoFromUrl('http://google.com'),
-				'id' => 'pagerank'
-			),
-            Piwik_Translate('SEO_Google_IndexedPages') => array(
-                'rank' => $rank->getIndexedPagesGoogle(),
-                'logo' => Piwik_getSearchEngineLogoFromUrl('http://google.com'),
-                'id' => 'google-index',
-            ),
-            Piwik_Translate('SEO_Bing_IndexedPages') => array(
-                'rank' => $rank->getIndexedPagesBing(),
-                'logo' => Piwik_getSearchEngineLogoFromUrl('http://bing.com'),
-                'id' => 'bing-index',
-			),
-			Piwik_Translate('SEO_AlexaRank') => array(
-				'rank' => $rank->getAlexaRank(),
-				'logo' => Piwik_getSearchEngineLogoFromUrl('http://alexa.com'),
-				'id' => 'alexa',
-			),
-			Piwik_Translate('SEO_DomainAge') => array(
-				'rank' => $rank->getAge(),
-				'logo' => 'plugins/SEO/images/whois.png',
-				'id'   => 'domain-age',
-			),
-		);
+    /**
+     * Returns SEO statistics for a URL.
+     *
+     * @param string $url URL to request SEO stats for
+     * @return DataTable
+     */
+    public function getRank($url)
+    {
+        Piwik::checkUserHasSomeViewAccess();
 
-		// Add DMOZ only if > 0 entries found
-		$dmozRank = array(
-			'rank' => $rank->getDmoz(),
-			'logo' => Piwik_getSearchEngineLogoFromUrl('http://dmoz.org'),
-			'id'   => 'dmoz',
-		);
-		if($dmozRank['rank'] > 0)
-		{
-			$data[Piwik_Translate('SEO_Dmoz')] = $dmozRank;
-		}
+        $metricProvider = new ProviderCache(new Aggregator());
+        $domain = Url::getHostFromUrl($url);
+        $metrics = $metricProvider->getMetrics($domain);
 
-		$dataTable = new Piwik_DataTable();
-		$dataTable->addRowsFromArrayWithIndexLabel($data);
-		return $dataTable;
-	}
+        return $this->toDataTable($metrics);
+    }
+
+    /**
+     * @param Metric[] $metrics
+     * @return DataTable
+     */
+    private function toDataTable(array $metrics)
+    {
+        $translated = array();
+
+        foreach ($metrics as $metric) {
+            if (!$metric instanceof Metric) {
+                continue;
+            }
+
+            $label = Piwik::translate($metric->getName());
+            $translated[$label] = array(
+                'id'           => $metric->getId(),
+                'rank'         => $metric->getValue(),
+                'logo'         => $metric->getLogo(),
+                'logo_link'    => $metric->getLogoLink(),
+                'logo_tooltip' => Piwik::translate($metric->getLogoTooltip()),
+                'rank_suffix'  => Piwik::translate($metric->getValueSuffix()),
+            );
+        }
+
+        return DataTable::makeFromIndexedArray($translated);
+    }
 }

@@ -1,33 +1,36 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Updates
  */
+
+namespace Piwik\Updates;
+
+use Piwik\Common;
+use Piwik\Updater;
+use Piwik\Updates;
 
 /**
- * @package Updates
  */
-class Piwik_Updates_1_9_1_b2 extends Piwik_Updates
+class Updates_1_9_1_b2 extends Updates
 {
-	static function getSql($schema = 'Myisam')
-	{
-		return array(
-			'ALTER TABLE '.Piwik_Common::prefixTable('site'). " DROP `feedburnerName`" => 1091
-		);
-	}
-	
-	static function update()
-	{
-		// manually remove ExampleFeedburner column
-		Piwik_Updater::updateDatabase(__FILE__, self::getSql());
+    public function getMigrationQueries(Updater $updater)
+    {
+        return array(
+            'ALTER TABLE ' . Common::prefixTable('site') . " DROP `feedburnerName`" => 1091
+        );
+    }
 
-		// remove ExampleFeedburner plugin
-		$pluginToDelete = 'ExampleFeedburner';
-		self::deletePluginFromConfigFile($pluginToDelete);
-	}
+    public function doUpdate(Updater $updater)
+    {
+        // manually remove ExampleFeedburner column
+        $updater->executeMigrationQueries(__FILE__, $this->getMigrationQueries($updater));
+
+        // remove ExampleFeedburner plugin
+        $pluginToDelete = 'ExampleFeedburner';
+        self::deletePluginFromConfigFile($pluginToDelete);
+    }
 }

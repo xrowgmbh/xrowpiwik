@@ -1,9 +1,50 @@
-# Piwik Server Log Analytics: Import your server logs in Piwik!
+# Piwik Server Log Analytics
+
+Import your server logs in Piwik with this powerful and easy to use tool.
 
 ## Requirements
 
 * Python 2.6 or 2.7. Python 3.x is not supported.
-* Update to Piwik 1.11
+* Piwik >= 2.14.0
+
+Build status (master branch) [![Build Status](https://travis-ci.org/piwik/piwik-log-analytics.svg?branch=master)](https://travis-ci.org/piwik/piwik-log-analytics)
+
+## Supported log formats
+
+
+The script will import all standard web server log files, and some files with non-standard formats. The following log formats are supported:
+ * all default log formats for: Nginx, Apache, IIS
+ * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON
+ * log files of some popular Cloud Saas services: Amazon CloudFront logs, Amazon S3 logs
+ * streaming media server log files such as: Icecast
+ * log files with and without the virtual host will be imported
+
+In general, many fields are left optional to make the log importer very flexible.
+ 
+## Get involved
+
+We're looking for contributors! Feel free to submit Pull requests on Github.
+
+### Submit a new log format
+
+The Log Analytics importer is designed to detect and import into Piwik as many log files as possible. Help us add your log formats!
+
+ * Implement your new log format in the import_logs.py file (look for `FORMATS = {` variable where the log formats are defined),
+ * Add a new test in [tests/tests.py](https://github.com/piwik/piwik-log-analytics/blob/master/tests/tests.py),
+ * Test that the logs are imported successfully as you expected,
+ * Open a Pull Request,
+ * Check the test you have added works (the build should be green),
+ * One Piwik team member will review and merge the Pull Request as soon as possible.
+
+We look forward to your contributions!
+
+### Improve this guide
+
+This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request. 
+
+### Implement new features or fixes
+
+if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/piwik/piwik-log-analytics/issues) which lists all issues and suggestions.
 
 ## How to use this script?
 
@@ -19,7 +60,13 @@ and will not track bots, static files, or error requests.
 
 If you wish to track all requests the following command would be used:
 
-    python /path/to/piwik/misc/log-analytics/import_logs.py --url=http://mysite/piwik/ access.log --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots
+    python /path/to/piwik/misc/log-analytics/import_logs.py --url=http://mysite/piwik/ --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots access.log 
+
+### Format Specific Details
+
+* If you are importing Netscaler log files, make sure to specify the **--iis-time-taken-secs** option. Netscaler stores
+  the time-taken field in seconds while most other formats use milliseconds. Using this option will ensure that the
+  log importer interprets the field correctly.
 
 ## How to import your logs automatically every day?
 
@@ -38,6 +85,31 @@ month and day).
 You can then import your logs automatically each day (at 0:01). Setup a cron job with the command:
 
     0 1 * * * /path/to/piwik/misc/log-analytics/import-logs.py -u piwik.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
+
+## Using Basic access authentication
+
+If you protect your site with Basic access authentication then you can pass the credentials via your
+cron job.
+
+Apache configuration:
+```
+<Location /piwik>
+    AuthType basic
+    AuthName "Site requires authentication"
+    # Where all the external login/passwords are
+    AuthUserFile /etc/apache2/somefile
+    Require valid-user
+</Location>
+```
+
+cron job:
+```
+5 0 * * * /var/www/html/piwik/misc/log-analytics/import_logs.py --url https://www.mysite.com/piwik --auth-user=someuser --auth-password=somepassword --exclude-path=/piwik/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
+```
+
+Security tips:
+* Currently the credentials are not encrypted in the cron job. This should be a future enhancement.
+* Always use HTTPS with Basic access authentication to ensure you are not passing credentials clear text.
 
 ## Performance
 
@@ -58,15 +130,116 @@ To improve performance,
    you can disable server access logging for these requests.
    Each Piwik webserver (Apache, Nginx, IIS) can also be tweaked a bit to handle more req/sec.
 
+## Advanced uses
 
-## Setup Apache CustomLog that directly imports in Piwik
+### Example Nginx Virtual Host Log Format
+
+This log format can be specified for nginx access logs to capture multiple virtual hosts:
+
+* log_format vhosts '$host $remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"';
+* access_log /PATH/TO/access.log vhosts;
+
+When executing import_logs.py specify the "common_complete" format.
+
+### How do I import Page Speed Metric from logs?
+
+In Piwik> Actions> Page URLs and Page Title reports, Piwik reports the Avg. generation time, as an indicator of your website speed.
+This metric works by default when using the Javascript tracker, but you can use it with log file as well.
+
+Apache can log the generation time in microseconds using %D in the LogFormat.
+This metric can be imported using a custom log format in this script.
+In the command line, add the --log-format-regex parameter that contains the group generation_time_micro.
+
+Here's an example:
+Apache LogFormat "%h %l %u %t \"%r\" %>s %b %D"
+--log-format-regex="(?P<ip>\S+) \S+ \S+ \[(?P<date>.*?) (?P<timezone>.*?)\] \"\S+ (?P<path>.*?) \S+\" (?P<status>\S+) (?P<length>\S+) (?P<generation_time_micro>\S+)"
+
+Note: the group <generation_time_milli> is also available if your server logs generation time in milliseconds rather than microseconds.
+
+### How do I setup Nginx to directly imports in Piwik via syslog?
+
+With the syslog patch from http://wiki.nginx.org/3rdPartyModules which is compiled in dotdeb's release, you can log to syslog and imports them live to Piwik.
+Path: Nginx -> syslog -> (syslog central server) -> this script -> piwik
+
+You can use any log format that this script can handle, like Apache Combined, and Json format which needs less processing.
+
+##### Setup Nginx logs
+
+```
+http {
+...
+log_format  piwik                   '{"ip": "$remote_addr",'
+                                    '"host": "$host",'
+                                    '"path": "$request_uri",'
+                                    '"status": "$status",'
+                                    '"referrer": "$http_referer",'
+                                    '"user_agent": "$http_user_agent",'
+                                    '"length": $bytes_sent,'
+                                    '"generation_time_milli": $request_time,'
+                                    '"date": "$time_iso8601"}';
+...
+	server {
+	...
+	access_log syslog:info piwik;
+	...
+	}
+}
+```
+
+##### Setup syslog-ng
+
+This is the config for the central server if any. If not, you can also use this config on the same server as Nginx.
+
+```
+options {
+    stats_freq(600); stats_level(1);
+    log_fifo_size(1280000);
+    log_msg_size(8192);
+};
+source s_nginx { udp(); };
+destination d_piwik {
+    program("/usr/local/piwik/piwik.sh" template("$MSG\n"));
+};
+log { source(s_nginx); filter(f_info); destination(d_piwik); };
+```
+
+##### piwik.sh
+
+Just needed to configure the best params for import_logs.py :
+```
+#!/bin/sh
+
+exec python /path/to/misc/log-analytics/import_logs.py \
+ --url=http://localhost/ --token-auth=<your_auth_token> \
+ --idsite=1 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
+ --log-format-name=nginx_json -
+```
+
+##### Example of regex for syslog format (centralized logs)
+
+###### log format exemple
+
+```
+Aug 31 23:59:59 tt-srv-name www.tt.com: 1.1.1.1 - - [31/Aug/2014:23:59:59 +0200] "GET /index.php HTTP/1.0" 200 3838 "http://www.tt.com/index.php" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0" 365020 www.tt.com
+```
+
+###### Corresponding regex
+
+```
+--log-format-regex='.* ((?P<ip>\S+) \S+ \S+ \[(?P<date>.*?) (?P<timezone>.*?)\] "\S+ (?P<path>.*?) \S+" (?P<status>\S+) (?P<length>\S+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)").*'
+```
+
+
+### Setup Apache CustomLog that directly imports in Piwik
 
 Since apache CustomLog directives can send log data to a script, it is possible to import hits into piwik server-side in real-time rather than processing a logfile each day.
 
 This approach has many advantages, including real-time data being available on your piwik site, using real logs files instead of relying on client-side Javacsript, and not having a surge of CPU/RAM usage during log processing.
 The disadvantage is that if Piwik is unavailable, logging data will be lost. Therefore we recommend to also log into a standard log file. Bear in mind also that apache processes will wait until a request is logged before processing a new request, so if piwik runs slow so does your site: it's therefore important to tune --recorders to the right level.
 
-In the most basic setup, you might have in your main config section:
+##### Basic setup
+
+You might have in your main config section:
 
 ```
 # Set up your log format as a normal extended format, with hostname at the start
@@ -89,8 +262,7 @@ Useful options here are:
 
 You can have as many CustomLog statements as you like. However, if you define any CustomLog directives within a <VirtualHost> block, all CustomLogs in the main config will be overridden. Therefore if you require custom logging for particular VirtualHosts, it is recommended to use mod_macro to make configuration more maintainable.
 
-
-## Advanced Log Analytics use case: Apache vhost, custom logs, automatic website creation
+##### Advanced setup: Apache vhost, custom logs, automatic website creation
 
 As a rather extreme example of what you can do, here is an apache config with:
 
@@ -101,7 +273,7 @@ As a rather extreme example of what you can do, here is an apache config with:
 
 NB use of mod_macro to ensure consistency and maintainability
 
-## Apache configuration source code:
+Apache configuration source code:
 
 ```
 # Set up macro with the options
@@ -167,11 +339,8 @@ Use piwiklog %v vhost_common main " "
 </VirtualHost>
 ```
 
-## Nginx Virtual Host Log Format
+### And that's all !
 
-This log format can be specified for nginx access logs to capture multiple virtual hosts:
 
-* log_format vhosts '$host $remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"';
-* access_log /PATH/TO/access.log vhosts;
+***This documentation is a community effort, feel free to suggest any change via Github Pull request.***
 
-When executing import_logs.py specify the "common_complete" format.

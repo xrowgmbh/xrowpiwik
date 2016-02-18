@@ -1,91 +1,80 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  * @package Piwik
  */
-$GLOBALS['PIWIK_TRACKER_DEBUG'] = false;
-$GLOBALS['PIWIK_TRACKER_DEBUG_FORCE_SCHEDULED_TASKS'] = false;
-define('PIWIK_ENABLE_TRACKING', true);
+umask(0);
+use Piwik\SettingsServer;
+use Piwik\Tracker\RequestSet;
+use Piwik\Tracker;
+use Piwik\Tracker\Handler;
 
-define('PIWIK_DOCUMENT_ROOT', dirname(__FILE__)=='/'?'':dirname(__FILE__));
-if(file_exists(PIWIK_DOCUMENT_ROOT . '/bootstrap.php'))
-{
-	require_once PIWIK_DOCUMENT_ROOT . '/bootstrap.php';
+// Note: if you wish to debug the Tracking API please see this documentation:
+// http://developer.piwik.org/api-reference/tracking-api#debugging-the-tracker
+
+if (!defined('PIWIK_DOCUMENT_ROOT')) {
+    define('PIWIK_DOCUMENT_ROOT', dirname(__FILE__) == '/' ? '' : dirname(__FILE__));
+}
+if (file_exists(PIWIK_DOCUMENT_ROOT . '/bootstrap.php')) {
+    require_once PIWIK_DOCUMENT_ROOT . '/bootstrap.php';
+}
+if (!defined('PIWIK_INCLUDE_PATH')) {
+    define('PIWIK_INCLUDE_PATH', PIWIK_DOCUMENT_ROOT);
 }
 
-$GLOBALS['PIWIK_TRACKER_MODE'] = true;
-error_reporting(E_ALL|E_NOTICE);
-@ini_set('xdebug.show_exception_trace', 0);
-@ini_set('magic_quotes_runtime', 0);
-
-if(!defined('PIWIK_USER_PATH'))
-{
-	define('PIWIK_USER_PATH', PIWIK_DOCUMENT_ROOT);
-}
-if(!defined('PIWIK_INCLUDE_PATH'))
-{
-	define('PIWIK_INCLUDE_PATH', PIWIK_DOCUMENT_ROOT);
-}
+require_once PIWIK_INCLUDE_PATH . '/core/bootstrap.php';
 
 @ignore_user_abort(true);
 
-require_once PIWIK_INCLUDE_PATH .'/libs/upgradephp/upgrade.php';
-require_once PIWIK_INCLUDE_PATH .'/libs/Event/Dispatcher.php';
-require_once PIWIK_INCLUDE_PATH .'/libs/Event/Notification.php';
-require_once PIWIK_INCLUDE_PATH .'/core/PluginsManager.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Plugin.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Common.php';
-require_once PIWIK_INCLUDE_PATH .'/core/IP.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Config.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Translate.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Cache.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Db.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Db/Exception.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/IgnoreCookie.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Visit.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/GoalManager.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Tracker/Action.php';
-require_once PIWIK_INCLUDE_PATH .'/core/CacheFile.php';
-require_once PIWIK_INCLUDE_PATH .'/core/Cookie.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Plugin/Controller.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Plugin/ControllerAdmin.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Singleton.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Plugin/Manager.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Plugin.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Common.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Piwik.php';
+require_once PIWIK_INCLUDE_PATH . '/core/IP.php';
+require_once PIWIK_INCLUDE_PATH . '/core/UrlHelper.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Url.php';
+require_once PIWIK_INCLUDE_PATH . '/core/SettingsPiwik.php';
+require_once PIWIK_INCLUDE_PATH . '/core/SettingsServer.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Tracker.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Config.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Translate.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Tracker/Cache.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Tracker/Request.php';
+require_once PIWIK_INCLUDE_PATH . '/core/Cookie.php';
 
-session_cache_limiter('nocache');
-@date_default_timezone_set('UTC');
+// TODO should move to Tracker application class later. currently needed for environment validation.
+SettingsServer::setIsTrackerApiRequest();
 
-if(!defined('PIWIK_ENABLE_TRACKING') || PIWIK_ENABLE_TRACKING)
-{
-	ob_start();
+$environment = new \Piwik\Application\Environment('tracker');
+$environment->init();
+
+Tracker::loadTrackerEnvironment();
+
+$tracker    = new Tracker();
+$requestSet = new RequestSet();
+
+ob_start();
+
+try {
+    $handler  = Handler\Factory::make();
+    $response = $tracker->main($handler, $requestSet);
+
+    if (!is_null($response)) {
+        echo $response;
+    }
+
+} catch (Exception $e) {
+    echo "Error:" . $e->getMessage();
+    exit(1);
 }
-if($GLOBALS['PIWIK_TRACKER_DEBUG'] === true)
-{	
-	require_once PIWIK_INCLUDE_PATH .'/core/Loader.php';
-	require_once PIWIK_INCLUDE_PATH .'/core/ErrorHandler.php';
-	require_once PIWIK_INCLUDE_PATH .'/core/ExceptionHandler.php';
-	$timer = new Piwik_Timer();
-	set_error_handler('Piwik_ErrorHandler');
-	set_exception_handler('Piwik_ExceptionHandler');
-	printDebug("Debug enabled - Input parameters: <br/>" . var_export($_GET, true));
-	Piwik_Tracker_Db::enableProfiling();
-	Piwik::createConfigObject();
-	Piwik::createLogObject();
-}
 
-if(!defined('PIWIK_ENABLE_TRACKING') || PIWIK_ENABLE_TRACKING)
-{
-	$process = new Piwik_Tracker();
-	try {
-		$process->main();
-	} catch(Exception $e) {
-		echo "Error:" . $e->getMessage();
-	}
-	ob_end_flush();
-	if($GLOBALS['PIWIK_TRACKER_DEBUG'] === true)
-	{	
-		printDebug($_COOKIE);
-		printDebug($timer);
-	}
+if (ob_get_level() > 1) {
+    ob_end_flush();
 }

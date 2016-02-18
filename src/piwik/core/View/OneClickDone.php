@@ -1,13 +1,13 @@
 <?php
 /**
- * Piwik - Open source web analytics
- * 
+ * Piwik - free/libre analytics platform
+ *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * 
- * @category Piwik
- * @package Piwik
+ *
  */
+
+namespace Piwik\View;
 
 /**
  * Post-update view
@@ -19,55 +19,62 @@
  *
  * This class needs to be self-contained, with no external dependencies.
  *
- * @package Piwik
  */
-class Piwik_View_OneClickDone
+class OneClickDone
 {
-	/**
-	 * @var string
-	 */
-	private $tokenAuth;
+    /**
+     * @var string
+     */
+    private $tokenAuth;
 
-	/**
-	 * @var string
-	 */
-	public $coreError;
+    /**
+     * @var string
+     */
+    public $error;
 
-	/**
-	 * @var array
-	 */
-	public $feedbackMessages;
+    /**
+     * @var array
+     */
+    public $feedbackMessages;
 
-	public function __construct($tokenAuth)
-	{
-		$this->tokenAuth = $tokenAuth;
-	}
+    /**
+     * Did the download over HTTPS fail?
+     *
+     * @var bool
+     */
+    public $httpsFail = false;
 
-	/**
-	 * Outputs the data.
-	 *
-	 * @return string  html
-	 */
-	public function render()
-	{
-		// set response headers
-		@header('Content-Type: text/html; charset=UTF-8');
-		@header('Pragma: ');
-		@header('Expires: ');
-		@header('Cache-Control: must-revalidate');
-		@header('X-Frame-Options: deny');
+    public function __construct($tokenAuth)
+    {
+        $this->tokenAuth = $tokenAuth;
+    }
 
-		$error = htmlspecialchars($this->coreError, ENT_QUOTES, 'UTF-8');
-		$messages = htmlspecialchars(serialize($this->feedbackMessages), ENT_QUOTES, 'UTF-8');
-		$tokenAuth = $this->tokenAuth;
+    /**
+     * Outputs the data.
+     *
+     * @return string  html
+     */
+    public function render()
+    {
+        // set response headers
+        @header('Content-Type: text/html; charset=UTF-8');
+        @header('Pragma: ');
+        @header('Expires: ');
+        @header('Cache-Control: must-revalidate');
+        @header('X-Frame-Options: deny');
 
-		// use a heredoc instead of an external file
-		echo <<<END_OF_TEMPLATE
+        $error = htmlspecialchars($this->error, ENT_QUOTES, 'UTF-8');
+        $messages = htmlspecialchars(serialize($this->feedbackMessages), ENT_QUOTES, 'UTF-8');
+        $tokenAuth = $this->tokenAuth;
+        $httpsFail = (int) $this->httpsFail;
+
+        // use a heredoc instead of an external file
+        echo <<<END_OF_TEMPLATE
 <!DOCTYPE html>
 <html>
  <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow">
+  <meta charset="utf-8">
   <title></title>
  </head>
  <body>
@@ -75,6 +82,7 @@ class Piwik_View_OneClickDone
    <input type="hidden" name="token_auth" value="$tokenAuth" />
    <input type="hidden" name="error" value="$error" />
    <input type="hidden" name="messages" value="$messages" />
+   <input type="hidden" name="httpsFail" value="$httpsFail" />
    <noscript>
     <button type="submit">Continue</button>
    </noscript>
@@ -85,5 +93,5 @@ class Piwik_View_OneClickDone
  </body>
 </html>
 END_OF_TEMPLATE;
-	}
+    }
 }

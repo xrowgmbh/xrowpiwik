@@ -1,166 +1,258 @@
 <?php
 /**
- * Piwik - Open source web analytics
- * 
+ * Piwik - free/libre analytics platform
+ *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * 
- * @category Piwik_Plugins
- * @package Piwik_Dashboard
+ *
  */
+namespace Piwik\Plugins\Dashboard;
+
+use Piwik\Common;
+use Piwik\Container\StaticContainer;
+use Piwik\Db;
+use Piwik\Piwik;
+use Piwik\Plugin;
+use Piwik\WidgetsList;
 
 /**
- * @package Piwik_Dashboard
  */
-class Piwik_Dashboard extends Piwik_Plugin
+class Dashboard extends \Piwik\Plugin
 {
-	public function getInformation()
-	{
-		return array(
-			'description' => Piwik_Translate('Dashboard_PluginDescription'),
-			'author' => 'Piwik',
-			'author_homepage' => 'http://piwik.org/',
-			'version' => Piwik_Version::VERSION,
-		);
-	}
+    /**
+     * @see Piwik\Plugin::registerEvents
+     */
+    public function registerEvents()
+    {
+        return array(
+            'AssetManager.getJavaScriptFiles'        => 'getJsFiles',
+            'AssetManager.getStylesheetFiles'        => 'getStylesheetFiles',
+            'UsersManager.deleteUser'                => 'deleteDashboardLayout',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys'
+        );
+    }
 
-	public function getListHooksRegistered()
-	{
-		return array( 
-			'AssetManager.getJsFiles' => 'getJsFiles',
-			'AssetManager.getCssFiles' => 'getCssFiles',
-			'UsersManager.deleteUser' => 'deleteDashboardLayout',
-			'Menu.add' => 'addMenus',
-			'TopMenu.add' => 'addTopMenu',
-		);
-	}
+    /**
+     * Returns the layout in the DB for the given user, or false if the layout has not been set yet.
+     * Parameters must be checked BEFORE this function call
+     *
+     * @param string $login
+     * @param int $idDashboard
+     *
+     * @return bool|string
+     */
+    public function getLayoutForUser($login, $idDashboard)
+    {
+        $return = $this->getModel()->getLayoutForUser($login, $idDashboard);
 
-	public static function getAllDashboards($login) {
-		$dashboards = Piwik_FetchAll('SELECT iddashboard, name
-									  FROM '.Piwik_Common::prefixTable('user_dashboard') .
-									' WHERE login = ? ORDER BY iddashboard', array($login));
-		$pos = 0;
-		$nameless = 1;
-		foreach ($dashboards AS &$dashboard) {
-			if (empty($dashboard['name'])) {
-				$dashboard['name'] = Piwik_Translate('Dashboard_DashboardOf', $login);
-				if($nameless > 1) {
-					$dashboard['name'] .= " ($nameless)";
-				}
-				if(empty($dashboard['layout']))
-				{
-					$layout = '[]';
-				}
-				else
-				{
-					$layout = html_entity_decode($dashboard['layout']);
-					$layout = str_replace("\\\"", "\"", $layout);
-				}
-				$dashboard['layout'] = Piwik_Common::json_decode($layout);
-				$nameless++;
-			}
-			$dashboard['name'] = Piwik_Common::unsanitizeInputValue($dashboard['name']);
-			$pos++;
-		}
-		return $dashboards;
-	}
+        if (count($return) == 0) {
+            return false;
+        }
 
-	public function addMenus()
-	{
-		Piwik_AddMenu('Dashboard_Dashboard', '', array('module' => 'Dashboard', 'action' => 'embeddedIndex', 'idDashboard' => 1), true, 5);
+        return $return[0]['layout'];
+    }
 
-		if (!Piwik::isUserIsAnonymous()) {
-			$login = Piwik::getCurrentUserLogin();
+    private function getModel()
+    {
+        return new Model();
+    }
 
-			$dashboards = self::getAllDashboards($login);
-			if (count($dashboards) > 1)
-			{
-				$pos = 0;
-				foreach ($dashboards AS $dashboard) {
-					Piwik_AddMenu('Dashboard_Dashboard', $dashboard['name'], array('module' => 'Dashboard', 'action' => 'embeddedIndex', 'idDashboard' => $dashboard['iddashboard']), true, $pos);
-					$pos++;
-				}
-			}
+    public function getDefaultLayout()
+    {
+        $defaultLayout = $this->getLayoutForUser('', 1);
 
-		}
-	}
+        if (empty($defaultLayout)) {
+            $topWidget = '';
 
-	public function addTopMenu()
-	{
-		$tooltip = false;
-		try
-		{
-			$idSite = Piwik_Common::getRequestVar('idSite');
-			$tooltip = Piwik_Translate('Dashboard_TopLinkTooltip', Piwik_Site::getNameFor($idSite));
-		}
-		catch (Exception $ex)
-		{
-			// if no idSite parameter, show no tooltip
-		}
-		
-		$urlParams = array('module' => 'CoreHome', 'action' => 'index');
-		Piwik_AddTopMenu('General_Dashboard', $urlParams, true, 1, $isHTML = false, $tooltip);
-	}
+            $advertising = StaticContainer::get('Piwik\PiwikPro\Advertising');
+            if ($advertising->arePiwikProAdsEnabled() && Plugin\Manager::getInstance()->isPluginActivated('PiwikPro')) {
+                $topWidget .= '{"uniqueId":"widgetPiwikPropromoPiwikPro",'
+                    . '"parameters":{"module":"PiwikPro","action":"promoPiwikPro"}},';
+            }
 
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function getJsFiles( $notification )
-	{
-		$jsFiles = &$notification->getNotificationObject();
-		
-		$jsFiles[] = "plugins/Dashboard/templates/widgetMenu.js";
-		$jsFiles[] = "libs/javascript/json2.js";
-		$jsFiles[] = "plugins/Dashboard/templates/dashboardObject.js";
-		$jsFiles[] = "plugins/Dashboard/templates/dashboardWidget.js";
-		$jsFiles[] = "plugins/Dashboard/templates/dashboard.js";
-	}
+            if (Piwik::hasUserSuperUserAccess()) {
+                $topWidget .= '{"uniqueId":"widgetCoreHomegetDonateForm",'
+                    . '"parameters":{"module":"CoreHome","action":"getDonateForm"}},';
+            } else {
+                $topWidget .= '{"uniqueId":"widgetCoreHomegetPromoVideo",'
+                    . '"parameters":{"module":"CoreHome","action":"getPromoVideo"}},';
+            }
 
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function getCssFiles( $notification )
-	{
-		$cssFiles = &$notification->getNotificationObject();
-		
-		$cssFiles[] = "plugins/CoreHome/templates/datatable.css";
-		$cssFiles[] = "plugins/Dashboard/templates/dashboard.css";
-	}
+            $defaultLayout = '[
+                [
+                    {"uniqueId":"widgetVisitsSummarygetEvolutionGraphcolumnsArray","parameters":{"module":"VisitsSummary","action":"getEvolutionGraph","columns":"nb_visits"}},
+                    {"uniqueId":"widgetLivewidget","parameters":{"module":"Live","action":"widget"}},
+                    {"uniqueId":"widgetVisitorInterestgetNumberOfVisitsPerVisitDuration","parameters":{"module":"VisitorInterest","action":"getNumberOfVisitsPerVisitDuration"}}
+                ],
+                [
+                    ' . $topWidget . '
+                    {"uniqueId":"widgetReferrersgetWebsites","parameters":{"module":"Referrers","action":"getWebsites"}},
+                    {"uniqueId":"widgetVisitTimegetVisitInformationPerServerTime","parameters":{"module":"VisitTime","action":"getVisitInformationPerServerTime"}}
+                ],
+                [
+                    {"uniqueId":"widgetUserCountryMapvisitorMap","parameters":{"module":"UserCountryMap","action":"visitorMap"}},
+                    {"uniqueId":"widgetDevicesDetectiongetBrowsers","parameters":{"module":"DevicesDetection","action":"getBrowsers"}},
+                    {"uniqueId":"widgetReferrersgetSearchEngines","parameters":{"module":"Referrers","action":"getSearchEngines"}},
+                    {"uniqueId":"widgetExampleRssWidgetrssPiwik","parameters":{"module":"ExampleRssWidget","action":"rssPiwik"}}
+                ]
+            ]';
+        }
 
-	/**
-	 * @param Piwik_Event_Notification $notification  notification object
-	 */
-	function deleteDashboardLayout($notification)
-	{
-		$userLogin = $notification->getNotificationObject();
-		Piwik_Query('DELETE FROM ' . Piwik_Common::prefixTable('user_dashboard') . ' WHERE login = ?', array($userLogin));
-	}
+        /**
+         * Allows other plugins to modify the default dashboard layout.
+         *
+         * @param string &$defaultLayout JSON encoded string of the default dashboard layout. Contains an
+         *                               array of columns where each column is an array of widgets. Each
+         *                               widget is an associative array w/ the following elements:
+         *
+         *                               * **uniqueId**: The widget's unique ID.
+         *                               * **parameters**: The array of query parameters that should be used to get this widget's report.
+         */
+        Piwik::postEvent("Dashboard.changeDefaultDashboardLayout", array(&$defaultLayout));
 
-	public function install()
-	{
-		// we catch the exception
-		try{
-			$sql = "CREATE TABLE ". Piwik_Common::prefixTable('user_dashboard')." (
-					login VARCHAR( 100 ) NOT NULL ,
-					iddashboard INT NOT NULL ,
-					name VARCHAR( 100 ) NULL DEFAULT NULL ,
-					layout TEXT NOT NULL,
-					PRIMARY KEY ( login , iddashboard )
-					)  DEFAULT CHARSET=utf8 " ;
-			Piwik_Exec($sql);
-		} catch(Exception $e){
-			// mysql code error 1050:table already exists
-			// see bug #153 http://dev.piwik.org/trac/ticket/153
-			if(!Zend_Registry::get('db')->isErrNo($e, '1050'))
-			{
-				throw $e;
-			}
-		}
-	}
-	
-	public function uninstall()
-	{
-		Piwik_DropTables(Piwik_Common::prefixTable('user_dashboard'));
-	}
-	
+        $defaultLayout = $this->removeDisabledPluginFromLayout($defaultLayout);
+
+        return $defaultLayout;
+    }
+
+    public function getAllDashboards($login)
+    {
+        $dashboards = $this->getModel()->getAllDashboardsForUser($login);
+
+        $nameless = 1;
+        foreach ($dashboards as &$dashboard) {
+
+            if (empty($dashboard['name'])) {
+                $dashboard['name'] = Piwik::translate('Dashboard_DashboardOf', $login);
+                if ($nameless > 1) {
+                    $dashboard['name'] .= " ($nameless)";
+                }
+
+                $nameless++;
+            }
+
+            $dashboard['name'] = Common::unsanitizeInputValue($dashboard['name']);
+
+            $layout = '[]';
+            if (!empty($dashboard['layout'])) {
+                $layout = $dashboard['layout'];
+            }
+
+            $dashboard['layout'] = $this->decodeLayout($layout);
+        }
+
+        return $dashboards;
+    }
+
+    private function isAlreadyDecodedLayout($layout)
+    {
+        return !is_string($layout);
+    }
+
+    public function removeDisabledPluginFromLayout($layout)
+    {
+        $layoutObject = $this->decodeLayout($layout);
+
+        // if the json decoding works (ie. new Json format)
+        // we will only return the widgets that are from enabled plugins
+
+        if (is_array($layoutObject)) {
+            $layoutObject = (object)array(
+                'config'  => array('layout' => '33-33-33'),
+                'columns' => $layoutObject
+            );
+        }
+
+        if (empty($layoutObject) || empty($layoutObject->columns)) {
+            $layoutObject = (object)array(
+                'config'  => array('layout' => '33-33-33'),
+                'columns' => array()
+            );
+        }
+
+        foreach ($layoutObject->columns as &$row) {
+            if (!is_array($row)) {
+                $row = array();
+                continue;
+            }
+
+            foreach ($row as $widgetId => $widget) {
+                if (isset($widget->parameters->module)) {
+                    $controllerName = $widget->parameters->module;
+                    $controllerAction = $widget->parameters->action;
+                    if (!WidgetsList::isDefined($controllerName, $controllerAction)) {
+                        unset($row[$widgetId]);
+                    }
+                } else {
+                    unset($row[$widgetId]);
+                }
+            }
+        }
+        $layout = $this->encodeLayout($layoutObject);
+        return $layout;
+    }
+
+    public function decodeLayout($layout)
+    {
+        if ($this->isAlreadyDecodedLayout($layout)) {
+            return $layout;
+        }
+
+        $layout = html_entity_decode($layout);
+        $layout = str_replace("\\\"", "\"", $layout);
+        $layout = str_replace("\n", "", $layout);
+
+        return json_decode($layout, $assoc = false);
+    }
+
+    public function encodeLayout($layout)
+    {
+        return json_encode($layout);
+    }
+
+    public function getJsFiles(&$jsFiles)
+    {
+        $jsFiles[] = "plugins/Dashboard/javascripts/widgetMenu.js";
+        $jsFiles[] = "libs/javascript/json2.js";
+        $jsFiles[] = "plugins/Dashboard/javascripts/dashboardObject.js";
+        $jsFiles[] = "plugins/Dashboard/javascripts/dashboardWidget.js";
+        $jsFiles[] = "plugins/Dashboard/javascripts/dashboard.js";
+    }
+
+    public function getStylesheetFiles(&$stylesheets)
+    {
+        $stylesheets[] = "plugins/CoreHome/stylesheets/dataTable.less";
+        $stylesheets[] = "plugins/Dashboard/stylesheets/dashboard.less";
+        $stylesheets[] = "plugins/Dashboard/stylesheets/widget.less";
+    }
+
+    public function deleteDashboardLayout($userLogin)
+    {
+        $this->getModel()->deleteAllLayoutsForUser($userLogin);
+    }
+
+    public function install()
+    {
+        Model::install();
+    }
+
+    public function uninstall()
+    {
+        Model::uninstall();
+    }
+
+    public function getClientSideTranslationKeys(&$translationKeys)
+    {
+        $translationKeys[] = 'Dashboard_AddPreviewedWidget';
+        $translationKeys[] = 'Dashboard_WidgetPreview';
+        $translationKeys[] = 'Dashboard_Maximise';
+        $translationKeys[] = 'Dashboard_Minimise';
+        $translationKeys[] = 'Dashboard_LoadingWidget';
+        $translationKeys[] = 'Dashboard_WidgetNotFound';
+        $translationKeys[] = 'Dashboard_DashboardCopied';
+        $translationKeys[] = 'Dashboard_Dashboard';
+        $translationKeys[] = 'Dashboard_RemoveDefaultDashboardNotPossible';
+        $translationKeys[] = 'General_Close';
+        $translationKeys[] = 'General_Refresh';
+    }
 }

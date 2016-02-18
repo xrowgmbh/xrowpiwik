@@ -1,174 +1,120 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Piwik
  */
+
+namespace Piwik;
+
+use Piwik\Container\StaticContainer;
+use Piwik\Scheduler\Scheduler;
+use Piwik\Scheduler\Task;
 
 // When set to true, all scheduled tasks will be triggered in all requests (careful!)
-define('DEBUG_FORCE_SCHEDULED_TASKS', false);
+//define('DEBUG_FORCE_SCHEDULED_TASKS', true);
 
 /**
- * Piwik_TaskScheduler is the class used to manage the execution of periodicaly planned task.
+ * Manages scheduled task execution.
  *
- * It performs the following actions :
- * 	- Identifies tasks of Piwik
- *  - Runs tasks
+ * A scheduled task is a callback that should be executed every so often (such as daily,
+ * weekly, monthly, etc.). They are registered by extending {@link \Piwik\Plugin\Tasks}.
  *
- * @package Piwik
+ * Tasks are executed when the `core:archive` command is executed.
+ *
+ * ### Examples
+ *
+ * **Scheduling a task**
+ *
+ *     class Tasks extends \Piwik\Plugin\Tasks
+ *     {
+ *         public function schedule()
+ *         {
+ *             $this->hourly('myTask');  // myTask() will be executed once every hour
+ *         }
+ *         public function myTask()
+ *         {
+ *             // do something
+ *         }
+ *     }
+ *
+ * **Executing all pending tasks**
+ *
+ *     $results = TaskScheduler::runTasks();
+ *     $task1Result = $results[0];
+ *     $task1Name = $task1Result['task'];
+ *     $task1Output = $task1Result['output'];
+ *
+ *     echo "Executed task '$task1Name'. Task output:\n$task1Output";
+ *
+ * @deprecated Use Piwik\Scheduler\Scheduler instead
+ * @see \Piwik\Scheduler\Scheduler
  */
-
-class Piwik_TaskScheduler
+class TaskScheduler
 {
-	const GET_TASKS_EVENT = "TaskScheduler.getScheduledTasks";
-	const TIMETABLE_OPTION_STRING = "TaskScheduler.timetable";
-	static private $running = false;
-	
-	/**
-	 * runTasks collects tasks defined within piwik plugins, runs them if they are scheduled and reschedules
-	 * the tasks that have been executed.
-	 *
-	 * @return array
-	 */
-	static public function runTasks()
-	{
-		// get the array where rescheduled timetables are stored
-		$timetable = self::getTimetableFromOptionTable();
-
-		// collect tasks
-		$tasks = array();
-		Piwik_PostEvent(self::GET_TASKS_EVENT, $tasks);
-
-		// remove from timetable tasks that are not active anymore
-		$activeTaskNames = array();
-		foreach($tasks as $task)
-		{
-			$activeTaskNames[] = $task->getName();
-		}
-		foreach(array_keys($timetable) as $taskName)
-		{
-			if(!in_array($taskName, $activeTaskNames))
-			{
-				unset($timetable[$taskName]);
-			}
-		}
-
-		// for every priority level, starting with the highest and concluding with the lowest
-		$executionResults = array();
-		for ($priority = Piwik_ScheduledTask::HIGHEST_PRIORITY;
-			 $priority <= Piwik_ScheduledTask::LOWEST_PRIORITY;
-			 ++$priority)
-		{
-			// loop through each task
-			foreach ($tasks as $task)
-			{
-				// if the task does not have the current priority level, don't execute it yet
-				if ($task->getPriority() != $priority)
-				{
-					continue;
-				}
-
-				$taskName = $task->getName();
-				if (self::taskShouldBeExecuted($taskName, $timetable))
-				{
-					self::$running = true;
-					$message = self::executeTask($task);
-					self::$running = false;
-
-					$executionResults[] = array('task' => $taskName, 'output' => $message);
-				}
-
-				if(self::taskShouldBeRescheduled($taskName, $timetable))
-				{
-					// update the scheduled time
-					$timetable[$taskName] = $task->getRescheduledTime();
-					Piwik_SetOption(self::TIMETABLE_OPTION_STRING, serialize($timetable));
-				}
-			}
-		}
-
-		return $executionResults;
-	}
-
-	static public function isTaskBeingExecuted()
-	{
-		return self::$running;
-	}
-	
     /**
-     * return the next task schedule for a given class and method name
-	 *
-     * @param string $className
-     * @param string $methodName
-     * @param string $methodParameter
-     * @return mixed int|bool the next schedule in miliseconds, false if task has never been run
+     * Executes tasks that are scheduled to run, then reschedules them.
+     *
+     * @return array An array describing the results of scheduled task execution. Each element
+     *               in the array will have the following format:
+     *
+     *               ```
+     *               array(
+     *                   'task' => 'task name',
+     *                   'output' => '... task output ...'
+     *               )
+     *               ```
      */
-    static public function getScheduledTimeForMethod($className, $methodName, $methodParameter = null) {
-
-		// get the array where rescheduled timetables are stored
-		$timetable = self::getTimetableFromOptionTable();
-
-		$taskName = Piwik_ScheduledTask::getTaskName($className, $methodName, $methodParameter);
-
-		return self::taskHasBeenScheduledOnce($taskName, $timetable) ? $timetable[$taskName] : false;
-	}
-
-	/*
-	 * Task has to be executed if :
-	 *  - the task has already been scheduled once and the current system time is greater than the scheduled time.
-	 * 	- execution is forced, see $forceTaskExecution
-	 */
-	static private function taskShouldBeExecuted($taskName, $timetable)
-	{
-		$forceTaskExecution =
-			(isset($GLOBALS['PIWIK_TRACKER_DEBUG_FORCE_SCHEDULED_TASKS']) && $GLOBALS['PIWIK_TRACKER_DEBUG_FORCE_SCHEDULED_TASKS'])
-			|| DEBUG_FORCE_SCHEDULED_TASKS;
-
-		return $forceTaskExecution || (self::taskHasBeenScheduledOnce($taskName, $timetable) && time() >= $timetable[$taskName]);
-	}
-
-	/*
-	 * Task has to be rescheduled if :
-	 *  - the task has to be executed
-	 * 	- the task has never been scheduled before
-	 */
-	static private function taskShouldBeRescheduled($taskName, $timetable)
-	{
-		return !self::taskHasBeenScheduledOnce($taskName, $timetable) || self::taskShouldBeExecuted($taskName, $timetable);
-	}
-
-	static private function taskHasBeenScheduledOnce($taskName, $timetable)
-	{
-		return isset($timetable[$taskName]);
-	}
-
-    static private function getTimetableFromOptionValue($option) {
-		$unserializedTimetable = @unserialize($option);
-		return $unserializedTimetable === false ? array() : $unserializedTimetable;
+    public static function runTasks()
+    {
+        return self::getInstance()->run();
     }
 
-	static private function getTimetableFromOptionTable()
-	{
-		return self::getTimetableFromOptionValue(Piwik_GetOption(self::TIMETABLE_OPTION_STRING));
-	}
+    /**
+     * Determines a task's scheduled time and persists it, overwriting the previous scheduled time.
+     *
+     * Call this method if your task's scheduled time has changed due to, for example, an option that
+     * was changed.
+     *
+     * @param Task $task Describes the scheduled task being rescheduled.
+     * @api
+     */
+    public static function rescheduleTask(Task $task)
+    {
+        self::getInstance()->rescheduleTask($task);
+    }
 
-	static private function executeTask($task)
-	{
-		try
-		{
-			$timer = new Piwik_Timer();
-			call_user_func(array($task->getObjectInstance(), $task->getMethodName()), $task->getMethodParameter());
-			$message = $timer->__toString();
-		}
-		catch(Exception $e)
-		{
-			$message = 'ERROR: ' . $e->getMessage();
-		}
+    /**
+     * Returns true if the TaskScheduler is currently running a scheduled task.
+     *
+     * @return bool
+     */
+    public static function isTaskBeingExecuted()
+    {
+        return self::getInstance()->isRunningTask();
+    }
 
-		return $message;
-	}
+    /**
+     * Return the next scheduled time given the class and method names of a scheduled task.
+     *
+     * @param string $className The name of the class that contains the scheduled task method.
+     * @param string $methodName The name of the scheduled task method.
+     * @param string|null $methodParameter Optional method parameter.
+     * @return mixed int|bool The time in miliseconds when the scheduled task will be executed
+     *                        next or false if it is not scheduled to run.
+     */
+    public static function getScheduledTimeForMethod($className, $methodName, $methodParameter = null)
+    {
+        return self::getInstance()->getScheduledTimeForMethod($className, $methodName, $methodParameter);
+    }
+
+    /**
+     * @return Scheduler
+     */
+    private static function getInstance()
+    {
+        return StaticContainer::getContainer()->get('Piwik\Scheduler\Scheduler');
+    }
 }

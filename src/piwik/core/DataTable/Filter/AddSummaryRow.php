@@ -1,96 +1,52 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Piwik
  */
+namespace Piwik\DataTable\Filter;
+
+use Piwik\DataTable\BaseFilter;
+use Piwik\DataTable;
+use Piwik\DataTable\Row\DataTableSummaryRow;
 
 /**
- * Add a new row to the table containing a summary
- * of the rows from StartRowToSummarize to EndRowToSummarize.
- * It then deletes the rows from StartRowToSummarize to EndRowToSummarize.
- * The new row created has a label = 'other'
+ * Adds a summary row to {@link DataTable}s that contains the sum of all other table rows.
  *
- * This filter is useful to build a more compact view of a table,
- * keeping the first records unchanged.
+ * **Basic usage example**
  *
- * For example we use this for the pie chart, to build the last pie part
- * which is the sum of all the remaining data after the top 5 data.
- * This row is assigned a label of 'Others'.
+ *     $dataTable->filter('AddSummaryRow');
  *
- * @package Piwik
- * @subpackage Piwik_DataTable
+ *     // use a human readable label for the summary row (instead of '-1')
+ *     $dataTable->filter('AddSummaryRow', array($labelSummaryRow = Piwik::translate('General_Total')));
+ *
+ * @api
  */
-class Piwik_DataTable_Filter_AddSummaryRow extends Piwik_DataTable_Filter
+class AddSummaryRow extends BaseFilter
 {
-	/**
-	 * Creates a new filter and set all required parameters
-	 *
-	 * @param Piwik_DataTable  $table
-	 * @param int              $startRowToSummarize
-	 * @param int              $labelSummaryRow
-	 * @param null             $columnToSortByBeforeTruncating
-	 * @param bool             $deleteRows
-	 */
-	public function __construct($table,
-								$startRowToSummarize,
-								$labelSummaryRow = Piwik_DataTable::LABEL_SUMMARY_ROW,
-								$columnToSortByBeforeTruncating = null,
-								$deleteRows = true )
-	{
-		parent::__construct($table);
-		$this->startRowToSummarize = $startRowToSummarize;
-		$this->labelSummaryRow = $labelSummaryRow;
-		$this->columnToSortByBeforeTruncating = $columnToSortByBeforeTruncating;
-		$this->deleteRows = $deleteRows;
-	}
+    /**
+     * Constructor.
+     *
+     * @param DataTable $table The table that will be filtered.
+     * @param int $labelSummaryRow The value of the label column for the new row.
+     */
+    public function __construct($table, $labelSummaryRow = DataTable::LABEL_SUMMARY_ROW)
+    {
+        parent::__construct($table);
+        $this->labelSummaryRow = $labelSummaryRow;
+    }
 
-	/**
-	 * Adds a summary row to the given data table
-	 *
-	 * @param Piwik_DataTable  $table
-	 */
-	public function filter($table)
-	{
-		if($table->getRowsCount() <= $this->startRowToSummarize + 1)
-		{
-			return;
-		}
-		$table->filter('Sort', 
-							array( $this->columnToSortByBeforeTruncating, 'desc'));
-		
-		$rows = $table->getRows();
-		$count = $table->getRowsCount();
-		$newRow = new Piwik_DataTable_Row();
-		for($i = $this->startRowToSummarize; $i < $count; $i++)
-		{
-			if(!isset($rows[$i]))
-			{
-				// case when the last row is a summary row, it is not indexed by $cout but by Piwik_DataTable::ID_SUMMARY_ROW
-				$summaryRow = $table->getRowFromId(Piwik_DataTable::ID_SUMMARY_ROW);
-				
-				//FIXME: I'm not sure why it could return false, but it was reported in: http://forum.piwik.org/read.php?2,89324,page=1#msg-89442
-				if($summaryRow)
-				{
-					$newRow->sumRow($summaryRow, $enableCopyMetadata = false);
-				}
-			}
-			else
-			{
-				$newRow->sumRow($rows[$i], $enableCopyMetadata = false);
-			}
-		}
-		
-		$newRow->setColumns(array('label' => $this->labelSummaryRow) + $newRow->getColumns());
-		if ($this->deleteRows)
-		{
-			$table->filter('Limit', array(0, $this->startRowToSummarize));
-		}
-		$table->addSummaryRow($newRow);
-		unset($rows);
-	}
+    /**
+     * Executes the filter. See {@link AddSummaryRow}.
+     *
+     * @param DataTable $table
+     */
+    public function filter($table)
+    {
+        $row = new DataTableSummaryRow($table);
+        $row->setColumn('label', $this->labelSummaryRow);
+        $table->addSummaryRow($row);
+    }
 }

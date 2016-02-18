@@ -1,40 +1,41 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
- * @category Piwik
- * @package Updates
  */
+
+namespace Piwik\Updates;
+
+use Piwik\Common;
+use Piwik\Updater;
+use Piwik\Updates;
 
 /**
- * @package Updates
  */
-class Piwik_Updates_1_9_b19 extends Piwik_Updates
+class Updates_1_9_b19 extends Updates
 {
-	static function getSql($schema = 'Myisam')
-	{
-		return array(
-			'ALTER TABLE  `'. Piwik_Common::prefixTable('log_link_visit_action') .'`
+    public function getMigrationQueries(Updater $updater)
+    {
+        return array(
+            'ALTER TABLE  `' . Common::prefixTable('log_link_visit_action') . '`
 			CHANGE `idaction_url_ref` `idaction_url_ref` INT( 10 ) UNSIGNED NULL DEFAULT 0'
-			=> false,
-			'ALTER TABLE  `'. Piwik_Common::prefixTable('log_visit') .'`
+            => false,
+            'ALTER TABLE  `' . Common::prefixTable('log_visit') . '`
 			CHANGE `visit_exit_idaction_url` `visit_exit_idaction_url` INT( 10 ) UNSIGNED NULL DEFAULT 0'
-			=> false
-		);
-	}
+            => false
+        );
+    }
 
-	static function update()
-	{
-		Piwik_Updater::updateDatabase(__FILE__, self::getSql());
+    public function doUpdate(Updater $updater)
+    {
+        $updater->executeMigrationQueries(__FILE__, $this->getMigrationQueries($updater));
 
-
-		try {
-			Piwik_PluginsManager::getInstance()->activatePlugin('Transitions');
-		} catch(Exception $e) {
-		}
-	}
+        try {
+            \Piwik\Plugin\Manager::getInstance()->activatePlugin('Transitions');
+        } catch (\Exception $e) {
+        }
+    }
 }
-
