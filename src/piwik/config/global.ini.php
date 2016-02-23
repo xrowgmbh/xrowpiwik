@@ -795,6 +795,7 @@ Plugins[] = DevicePlugins
 Plugins[] = Heartbeat
 Plugins[] = Intl
 Plugins[] = PiwikPro
+Plugins[] = ClickHeat
 
 [PluginsInstalled]
 PluginsInstalled[] = Diagnostics
