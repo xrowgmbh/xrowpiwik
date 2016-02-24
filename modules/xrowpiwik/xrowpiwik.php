@@ -32,7 +32,7 @@ require_once( "kernel/common/template.php" );
 
 $module = $Params['Module'];
 $http = eZHTTPTool::instance();
-$tpl = templateInit();
+$tpl = eZTemplate::factory();
 $viewParameters = array();
 $availableTranslations = eZContentLanguage::fetchList();
 $thisUrl = '/xrowpiwik/xrowpiwik';
@@ -40,11 +40,6 @@ $tpl->setVariable( 'baseurl', $thisUrl );
 
 $Result = array();
 $Result['content'] = "<iframe src=\"/extension/xrowpiwik/src/piwik/index.php\" width='98%' height='780' frameborder='0'></iframe>";
-#include 'extension/xrowpiwik/src/piwik/index.php';
-#eZExecution::cleanExit(); 
-#$tpl->fetch( "design:xrowpiwik/xrowpiwik.tpl" );
 $Result['left_menu'] = "design:xrowpiwik/backoffice_left_menu.tpl";
 $Result['path'] = array( array( 'url' => false,
                                 'text' => "xrow PIWIK" ) );
-
-?>
