@@ -7,20 +7,20 @@ You need do perform the following steps:
 - place xrowpiwik in extension folder
 - activate extension
 - modify ReWriteRules to work with /extension/xrowpiwik/src/piwik/
--- <add input="{URL}" pattern="extension/xrowpiwik/src/piwik/" ignoreCase="false" />
-- adjust DB-Connection in /extension/settings/config.ini.append.php
+Rewriterule ^extension/xrowpiwik/src/piwik/.* - [L]
+- <add input="{URL}" pattern="extension/xrowpiwik/src/piwik/" ignoreCase="false" />
+- adjust DB-Connection in /extension/xrowpiwik/settings/config.ini.append.php
+- set a cron for archivepiwik
 - insert mysql schema+data from extension\xrowpiwik\doc\mysql_schema\xrowpiwik_clean.sql
-- Fix Piwik permissions
-mkdir -p extension/xrowpiwik/src/piwik/tmp/
-mkdir -p extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
-mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/tracker
-mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/clickheat
-mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/clickheat/cache
-mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/clickheat/logs
-chmod 777 extension/xrowpiwik/src/piwik/tmp/
-chmod 777 extension/xrowpiwik/src/piwik/tmp/{assets,tcpdf,templates_c}
-chmod 777 -R extension/xrowpiwik/src/piwik/tmp/cache
-- update the database to the xrowpiwik version: php extension/xrowpiwik/src/piwik/console core:update
+- fix Piwik permissions
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/{tracker,clickheat}
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat/{cache,logs}
+chmod -R 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
+- update the database to newest xrowpiwik version: 
+cd ezpublish_legacy
+php extension/xrowpiwik/src/piwik/console core:update
 
 Standard User: admin / admin
 Multi-User_setup can be established by providing different SiteIDs per siteaccess in xrowpiwik.ini.append.php
