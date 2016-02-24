@@ -133,6 +133,28 @@ CREATE TABLE `piwik_goal` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `piwik_segment`
+--
+
+DROP TABLE IF EXISTS `piwik_segment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `piwik_segment` (
+  `idsegment` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `definition` text NOT NULL,
+  `login` varchar(100) NOT NULL,
+  `enable_all_users` tinyint(4) NOT NULL DEFAULT '0',
+  `enable_only_idsite` int(11) DEFAULT NULL,
+  `auto_archive` tinyint(4) NOT NULL DEFAULT '0',
+  `ts_created` timestamp NULL DEFAULT NULL,
+  `ts_last_edit` timestamp NULL DEFAULT NULL,
+  `deleted` tinyint(4) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`idsegment`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `piwik_goal`
 --
 

@@ -11,15 +11,15 @@ You need do perform the following steps:
 - adjust DB-Connection in /extension/settings/config.ini.append.php
 - insert mysql schema+data from extension\xrowpiwik\doc\mysql_schema\xrowpiwik_clean.sql
 - Fix Piwik permissions
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/tracker
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat/cache
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat/logs
-chmod 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/
-chmod 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/{assets,tcpdf,templates_c}
-chmod 777 -R ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache
+mkdir -p extension/xrowpiwik/src/piwik/tmp/
+mkdir -p extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
+mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/tracker
+mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/clickheat
+mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/clickheat/cache
+mkdir -p extension/xrowpiwik/src/piwik/tmp/cache/clickheat/logs
+chmod 777 extension/xrowpiwik/src/piwik/tmp/
+chmod 777 extension/xrowpiwik/src/piwik/tmp/{assets,tcpdf,templates_c}
+chmod 777 -R extension/xrowpiwik/src/piwik/tmp/cache
 - update the database to the xrowpiwik version: php extension/xrowpiwik/src/piwik/console core:update
 
 Standard User: admin / admin
