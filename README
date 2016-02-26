@@ -9,18 +9,21 @@ You need do perform the following steps:
 - modify ReWriteRules to work with /extension/xrowpiwik/src/piwik/
 Rewriterule ^extension/xrowpiwik/src/piwik/.* - [L]
 - <add input="{URL}" pattern="extension/xrowpiwik/src/piwik/" ignoreCase="false" />
-- adjust DB-Connection in /extension/xrowpiwik/settings/config.ini.append.php
+- adjust DB-Connection in ezpublish_legacy/extension/xrowpiwik/settings/config.ini.append.php
 - set a cron for archivepiwik
-- insert mysql schema+data from extension\xrowpiwik\doc\mysql_schema\xrowpiwik_clean.sql
+- insert mysql schema+data from ezpublish_legacy/extension/xrowpiwik/doc/mysql_schema/xrowpiwik_clean.sql
 - fix Piwik permissions
 mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
 mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/{tracker,clickheat}
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat/{cache,logs}
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/{tracker}
 chmod -R 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
 - update the database to newest xrowpiwik version: 
 cd ezpublish_legacy
 php extension/xrowpiwik/src/piwik/console core:update
+
+add symlink to make it work with your own configuration
+ln -s ../../../../../settings/override/config.ini.append.php ezpublish_legacy/extension/xrowpiwik/src/piwik/config/config.ini.php
+
 
 Standard User: admin / admin
 Multi-User_setup can be established by providing different SiteIDs per siteaccess in xrowpiwik.ini.append.php
@@ -29,3 +32,19 @@ Data-collection works via Ajax and design.ini FrontendJavaScriptList
 
 !eZJscore required
 !not clustersafe since config.ini.append.php is in /extension/settings/config.ini.append.php
+
+CLICKHEAT
+=========
+
+if you want to use the clickheat plugin you should do the following:
+
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/{clickheat}
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat/{cache,logs}
+chmod -R 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat
+
+to collect the click data you must activate it by doing the following:
+
+ln -s ../../../src/piwik/plugins/ClickHeat/libs/js/clickheat.js ezpublish_legacy/extension/xrowpiwik/design/standard/javascript/clickheat.js
+put this operator at the bottom of your <body> tag in your pagelayout.tpl: {click_tracker()}
+
+(our operator works with siteaccess_names and piwik site IDs)

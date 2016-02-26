@@ -4,6 +4,8 @@
 # SiteID defaults to 1, if not set
 #PiwikSiteID=1
 #DisableCookies=enabled
+#set to "enabled" if you want to click the tracks for the ClickHeat plugin
+ClickHeatTracking=disabled
 
 #[SecondPiwikID]
 #NodeID[]
