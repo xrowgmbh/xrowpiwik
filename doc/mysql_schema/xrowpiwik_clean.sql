@@ -133,6 +133,15 @@ CREATE TABLE `piwik_goal` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `piwik_goal`
+--
+
+LOCK TABLES `piwik_goal` WRITE;
+/*!40000 ALTER TABLE `piwik_goal` DISABLE KEYS */;
+/*!40000 ALTER TABLE `piwik_goal` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `piwik_segment`
 --
 
@@ -151,16 +160,16 @@ CREATE TABLE `piwik_segment` (
   `ts_last_edit` timestamp NULL DEFAULT NULL,
   `deleted` tinyint(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`idsegment`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `piwik_goal`
+-- Dumping data for table `piwik_segment`
 --
 
-LOCK TABLES `piwik_goal` WRITE;
-/*!40000 ALTER TABLE `piwik_goal` DISABLE KEYS */;
-/*!40000 ALTER TABLE `piwik_goal` ENABLE KEYS */;
+LOCK TABLES `piwik_segment` WRITE;
+/*!40000 ALTER TABLE `piwik_segment` DISABLE KEYS */;
+/*!40000 ALTER TABLE `piwik_segment` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
