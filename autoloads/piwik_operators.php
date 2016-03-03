@@ -24,19 +24,23 @@ class piwikOps
             case 'click_tracker':
                 $piwik_ini = eZINI::instance("xrowpiwik.ini");
                 $current_siteaccess = $GLOBALS['eZCurrentAccess'];
-                $clickheat_server = "http://admin.hannover.de/extension/xrowpiwik/src/piwik/plugins/ClickHeat/libs/click.php";
+                $current_siteaccess = $current_siteaccess["name"];
+                $clickheat_server = "http://" . $_SERVER['HTTP_HOST'] . "/extension/xrowpiwik/src/piwik/plugins/ClickHeat/libs/click.php";
                 $clickheat_quota = 3;
                 $piwi_site_id = $piwik_ini->variable( 'General', 'PiwikSiteID' );
                 
                 if ( $piwik_ini->variable( 'General', 'ClickHeatTracking' ) == 'enabled' AND is_numeric($piwi_site_id) )
                 {
-                    $js_string = "{literal}<script type=\"text/javascript\"><!--
+                    $js_string = "{literal}<script type=\"text/javascript\">
+                                                $(document).ready(function(){
                                                 clickHeatSite = ". $piwi_site_id .";
                                                 clickHeatGroup = '". $current_siteaccess ."';
                                                 clickHeatQuota = ". $clickheat_quota .";
                                                 clickHeatServer = '". $clickheat_server ."';
-                                                initClickHeat(); //-->
-                                            </script>{/literal}";
+                                                initClickHeat();
+                                                });
+                                           </script>
+                                          {/literal}";
                 }
                 else
                 {
