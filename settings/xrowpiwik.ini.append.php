@@ -1,6 +1,6 @@
 <?php /* #?ini charset="utf-8"?
 
-#[General]
+[General]
 # SiteID defaults to 1, if not set
 #PiwikSiteID=1
 #DisableCookies=enabled
