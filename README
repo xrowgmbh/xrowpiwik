@@ -48,3 +48,12 @@ ln -s ../../../src/piwik/plugins/ClickHeat/libs/js/clickheat.js ezpublish_legacy
 put this operator at the bottom of your <body> tag in your pagelayout.tpl: {click_tracker()}
 
 (our operator works with siteaccess_names and piwik site IDs)
+
+Attention: if you are using a clustered System, please make sure your clickheat logs are stored at a central position where all nodes can read it.
+
+Example:
+
+cd ezpublish_legacy
+mkdir /NFS/SITE/clickheat
+chmod 777 /NFS/SITE/clickheat
+ln -s /NFS/SITE/clickheat extension/xrowpiwik/src/piwik/tmp/cache/clickheat
