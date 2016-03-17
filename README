@@ -15,7 +15,7 @@ Rewriterule ^extension/xrowpiwik/src/piwik/.* - [L]
 - fix Piwik permissions
 mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
 mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/{assets,cache,tcpdf,templates_c}
-mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/{tracker}
+mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/tracker
 chmod -R 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
 - update the database to newest xrowpiwik version: 
 cd ezpublish_legacy
@@ -29,6 +29,9 @@ Standard User: admin / admin
 Multi-User_setup can be established by providing different SiteIDs per siteaccess in xrowpiwik.ini.append.php
 
 Data-collection works via Ajax and design.ini FrontendJavaScriptList
+[JavaScriptSettings]
+...
+FrontendJavaScriptList[]=xrowpiwik::doPiwikTrack
 
 !eZJscore required
 !not clustersafe since config.ini.append.php is in /extension/settings/config.ini.append.php
@@ -45,9 +48,15 @@ chmod -R 777 ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp/cache/clickheat
 to collect the click data you must activate it by doing the following:
 
 ln -s ../../../src/piwik/plugins/ClickHeat/libs/js/clickheat.js ezpublish_legacy/extension/xrowpiwik/design/standard/javascript/clickheat.js
-put this operator at the bottom of your <body> tag in your pagelayout.tpl: {click_tracker()}
-
-(our operator works with siteaccess_names and piwik site IDs)
+put this operator at the bottom of your <body> tag in your pagelayout.tpl: {click_tracker()} (our operator works with siteaccess_names and piwik site IDs)
+and enable the setting in your xrowpiwik.ini:
+[General]
+...
+ClickHeatTracking=enabled
+and maybe extend your design.ini:
+[JavaScriptSettings]
+...
+FrontendJavaScriptList[]=clickheat.js
 
 Attention: if you are using a clustered System, please make sure your clickheat logs are stored at a central position where all nodes can read it.
 
