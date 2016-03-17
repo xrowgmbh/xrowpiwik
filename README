@@ -53,6 +53,7 @@ and enable the setting in your xrowpiwik.ini:
 [General]
 ...
 ClickHeatTracking=enabled
+
 and maybe extend your design.ini:
 [JavaScriptSettings]
 ...
