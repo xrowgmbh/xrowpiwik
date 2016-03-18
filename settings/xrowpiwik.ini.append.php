@@ -19,4 +19,12 @@ ClickHeatTracking=disabled
 #NodeID[]
 #NodeID[<nodeID>]=<PiwikMandantenID>
 
+[ClickHeatSettings]
+# Please track all devices
+DoTrackingFor=all
+# If you would like track only desktop or tablet or mobile take a loot at this
+#DoTrackingFor=desktop
+#DoTrackingFor=desktop,tablet
+#DoTrackingFor=tablet,mobile
+
 */ ?>
