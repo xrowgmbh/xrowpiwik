@@ -11,8 +11,8 @@ Rewriterule ^extension/xrowpiwik/src/piwik/.* - [L]
 - <add input="{URL}" pattern="extension/xrowpiwik/src/piwik/" ignoreCase="false" />
 - adjust DB-Connection in ezpublish_legacy/extension/xrowpiwik/settings/config.ini.append.php
 - set a cron for archivepiwik
-  Example:
-  55        *      *       *       *     cd /var/www/www.wuv.de/ezpublish_legacy && sudo chmod -Rf 777 extension/xrowpiwik/src/piwik/tmp && php extension/xrowpiwik/src/piwik/console core:archive --url=http://[YOUR_BACKEND]/xrowpiwik/xrowpiwik/index.php > /dev/null 2>&1
+  Example for a cron:
+  55 * * * * cd /[EZ_ROOT]/ezpublish_legacy && sudo chmod -Rf 777 extension/xrowpiwik/src/piwik/tmp && php extension/xrowpiwik/src/piwik/console core:archive --url=http://[YOUR_BACKEND]/xrowpiwik/xrowpiwik/index.php > /dev/null 2>&1
 - insert mysql schema+data from ezpublish_legacy/extension/xrowpiwik/doc/mysql_schema/xrowpiwik_clean.sql
 - fix Piwik permissions
 mkdir -p ezpublish_legacy/extension/xrowpiwik/src/piwik/tmp
