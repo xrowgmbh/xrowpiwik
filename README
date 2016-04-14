@@ -56,7 +56,7 @@ and enable the setting in your xrowpiwik.ini:
 ...
 ClickHeatTracking=enabled
 
-and maybe extend your design.ini:
+and extend your design.ini:
 [JavaScriptSettings]
 ...
 FrontendJavaScriptList[]=clickheat.js
