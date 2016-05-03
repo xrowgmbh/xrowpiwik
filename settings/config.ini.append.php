@@ -14,9 +14,9 @@ login = "admin"
 password = "21232f297a57a5a743894a0e4a801fc3"
 email = "piwik@example.com"
 
-;[General]
-;assume_secure_protocol = 1
-;proxy_client_headers[] = HTTP_X_FORWARDED_FOR
+[General]
+assume_secure_protocol = 1
+proxy_client_headers[] = HTTP_X_FORWARDED_FOR
 
 [PluginsInstalled]
 PluginsInstalled[] = "Login"
