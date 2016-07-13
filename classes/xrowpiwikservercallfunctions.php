@@ -33,12 +33,12 @@ class xrowPiwikServerCallFunctions
     public static function doPiwikTrack()
     {
         $xp_ini = eZINI::instance('xrowpiwik.ini');
-        $siteID = 1;
+        //$siteID = 1;
         $disableCookies = false;
-        if( $xp_ini->hasVariable('General', 'PiwikSiteID') )
+       /* if( $xp_ini->hasVariable('General', 'PiwikSiteID') )
         {
             $siteID = (int) trim($xp_ini->variable('General', 'PiwikSiteID'));
-        }
+        }*/
         if( $xp_ini->hasVariable('General', 'DisableCookies') && trim($xp_ini->variable('General', 'DisableCookies')) == 'enabled')
         {
             $disableCookies = true;
@@ -49,21 +49,28 @@ class xrowPiwikServerCallFunctions
         $piwikRequest = "/ezjscore/call/xrowpiwik::piwik";
         $return = file_get_contents("extension/xrowpiwik/src/piwik/piwik.js");
         $return .="<!-- Piwik -->
+               jQuery(document).ready(function($)
+               {
                    var pkBaseURL = \"" . $piwikRequest ."/\";
                    try {
-                        var piwikTracker = Piwik.getTracker(pkBaseURL + \"\", " . $siteID . ");";
+                            if (!isNaN($(\"body\").attr(\"data-piwikmainid\")) && $(\"body\").attr(\"data-piwikmainid\") > 0)
+                            {
+                                var mainpiwikid=$(\"body\").attr(\"data-piwikmainid\");
+                                var piwikTracker0 = Piwik.getTracker(pkBaseURL + \"\", mainpiwikid );";
         if($disableCookies)
         {
             $return .="
-                        piwikTracker.disableCookies();";
+                                piwikTracker0.disableCookies();";
         }
         $return .="
-                        piwikTracker.trackPageView();
-                        piwikTracker.enableLinkTracking();
-                   }
-                   catch( err ) {}
+                                piwikTracker0.trackPageView();
+                                piwikTracker0.enableLinkTracking();
+                            }
+                       }
+                       catch( err ) {}
+                   });
 
-                   <!-- SecondPiwikID Feature -->
+               <!-- SecondPiwikID Feature -->
                    jQuery(document).ready(function($)
                    {
                        var pkBaseURL = \"" . $piwikRequest ."/\";
