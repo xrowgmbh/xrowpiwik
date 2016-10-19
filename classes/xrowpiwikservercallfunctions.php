@@ -5,31 +5,6 @@
  */
 class xrowPiwikServerCallFunctions
 {
-    /**
-     * PIWIK.ORG Integration
-     *
-     * @param mixed $args
-     */
-    public static function piwik( $args )
-    {
-        /**
-        * Piwik - Open source web analytics
-        *
-        * @link http://piwik.org
-        * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
-        * @version $Id: piwik.php 6859 2012-08-22 09:04:47Z matt $
-        *
-        * @package Piwik
-        */
-        #$xp_ini = eZINI::instance('xrowpiwik.ini');
-        define('PIWIK_DOCUMENT_ROOT', 'extension/xrowpiwik/src/piwik');
-        define('PIWIK_USER_PATH', 'extension/xrowpiwik/src/piwik');
-        define('PIWIK_INCLUDE_PATH', 'extension/xrowpiwik/src/piwik');
-        
-        require_once 'extension/xrowpiwik/src/piwik/piwik.php';
-        
-    }
-    
     public static function doPiwikTrack()
     {
         $xp_ini = eZINI::instance('xrowpiwik.ini');
@@ -43,10 +18,7 @@ class xrowPiwikServerCallFunctions
         {
             $disableCookies = true;
         }
-        $rootUrl = "//" . eZSys::hostname() . eZSys::indexDir();
-        $piwikRequest = $rootUrl . "/ezjscore/call/xrowpiwik::piwik";
-
-        $piwikRequest = "/ezjscore/call/xrowpiwik::piwik";
+        $piwikRequest = trim($xp_ini->variable('General', 'URL'));
         $return = file_get_contents("extension/xrowpiwik/src/piwik/piwik.js");
         $return .="<!-- Piwik -->
                jQuery(document).ready(function($)
