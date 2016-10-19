@@ -8,12 +8,9 @@ class xrowPiwikServerCallFunctions
     public static function doPiwikTrack()
     {
         $xp_ini = eZINI::instance('xrowpiwik.ini');
-        //$siteID = 1;
+
         $disableCookies = false;
-       /* if( $xp_ini->hasVariable('General', 'PiwikSiteID') )
-        {
-            $siteID = (int) trim($xp_ini->variable('General', 'PiwikSiteID'));
-        }*/
+
         if( $xp_ini->hasVariable('General', 'DisableCookies') && trim($xp_ini->variable('General', 'DisableCookies')) == 'enabled')
         {
             $disableCookies = true;
