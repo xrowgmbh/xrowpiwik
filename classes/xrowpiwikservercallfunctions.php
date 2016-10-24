@@ -20,7 +20,7 @@ class xrowPiwikServerCallFunctions
         $return .="<!-- Piwik -->
                jQuery(document).ready(function($)
                {
-                   var pkBaseURL = \"" . $piwikRequest ."/\";
+                   var pkBaseURL = \"" . $piwikRequest ."\";
                    try {
                             if (!isNaN($(\"body\").attr(\"data-piwikmainid\")) && $(\"body\").attr(\"data-piwikmainid\") > 0)
                             {
