@@ -15,7 +15,7 @@ class xrowPiwikServerCallFunctions
         {
             $disableCookies = true;
         }
-        $piwikRequest = trim($xp_ini->variable('General', 'URL'));
+        $piwikRequest = trim($xp_ini->variable('General', 'URL')) . "/piwik.php";
         $return = file_get_contents("extension/xrowpiwik/src/piwik/piwik.js");
         $return .="<!-- Piwik -->
                jQuery(document).ready(function($)
