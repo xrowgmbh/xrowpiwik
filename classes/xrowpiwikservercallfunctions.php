@@ -42,7 +42,7 @@ class xrowPiwikServerCallFunctions
                <!-- SecondPiwikID Feature -->
                    jQuery(document).ready(function($)
                    {
-                       var pkBaseURL = \"" . $piwikRequest ."/\";
+                       var pkBaseURL = \"" . $piwikRequest ."\";
                        try
                        {
                            if (!isNaN($(\"body\").attr(\"data-piwikID\")) && $(\"body\").attr(\"data-piwikID\") > 0)
@@ -65,7 +65,7 @@ class xrowPiwikServerCallFunctions
                 <!-- ThirdPiwikID Feature -->
                    jQuery(document).ready(function($)
                    {
-                       var pkBaseURL = \"" . $piwikRequest ."/\";
+                       var pkBaseURL = \"" . $piwikRequest ."\";
                        try
                        {
                            if (!isNaN($(\"body\").attr(\"data-piwik3ID\")) && $(\"body\").attr(\"data-piwik3ID\") > 0)
@@ -89,7 +89,7 @@ class xrowPiwikServerCallFunctions
                 <!-- HomePiwikID Feature -->
                    jQuery(document).ready(function($)
                    {
-                       var pkBaseURL = \"" . $piwikRequest ."/\";
+                       var pkBaseURL = \"" . $piwikRequest ."\";
                        try
                        {
                            if (!isNaN($(\"body\").attr(\"data-piwikIndexID\")) && $(\"body\").attr(\"data-piwikIndexID\") > 0)
