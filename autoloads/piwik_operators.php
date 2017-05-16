@@ -25,7 +25,7 @@ class piwikOps
                 $piwik_ini = eZINI::instance("xrowpiwik.ini");
                 $current_siteaccess = $GLOBALS['eZCurrentAccess'];
                 $current_siteaccess = $current_siteaccess["name"];
-                $clickheat_server = "http://" . $_SERVER['HTTP_HOST'] . "/extension/xrowpiwik/src/piwik/plugins/ClickHeat/libs/click.php";
+                $clickheat_server = "https://" . $_SERVER['HTTP_HOST'] . "/extension/xrowpiwik/src/piwik/plugins/ClickHeat/libs/click.php";
                 $clickheat_quota = 3;
                 $piwi_site_id = $piwik_ini->variable( 'General', 'PiwikSiteID' );
                 
